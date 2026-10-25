@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>投票に参加</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body { background: var(--wash); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  header {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--teal-deep); color: #fff;
+    padding: calc(env(safe-area-inset-top, 0px) + .55rem) 1rem .55rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-size: .85rem;
+  }
+  header .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .who { flex: none; opacity: .85; }
+  main { max-width: 34rem; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  .card { background: var(--paper); border-radius: var(--radius-m); padding: 1.25rem; }
+  h1 { font-size: 1.3rem; line-height: 1.5; margin: 0 0 .4rem; }
+  .how { color: var(--teal); font-weight: 700; font-size: .95rem; margin: 0 0 1rem; }
+  .desc { color: var(--ink-soft); margin: 0 0 1rem; }
+
+  .opts { list-style: none; margin: 0 0 1.25rem; padding: 0; display: grid; gap: .6rem; }
+  .opt {
+    width: 100%; min-height: 56px; text-align: left; display: flex; align-items: center; gap: .8rem;
+    padding: .7rem .9rem; border: 2px solid var(--line); border-radius: var(--radius-s);
+    background: #fff; cursor: pointer; line-height: 1.45;
+  }
+  .opt .mark {
+    flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 2px solid var(--line);
+    display: grid; place-items: center; font-weight: 700; font-size: .95rem; color: #fff;
+  }
+  .opt.multi .mark { border-radius: 5px; }
+  .opt[aria-pressed="true"] { border-color: var(--teal); background: var(--teal-pale); }
+  .opt[aria-pressed="true"] .mark { background: var(--teal); border-color: var(--teal); }
+  .opt:disabled { opacity: .45; cursor: not-allowed; }
+  .opt.correct { border-color: var(--teal-deep); opacity: 1; }
+  .opt.correct .mark { background: var(--teal-deep); border-color: var(--teal-deep); }
+  .opt.correct[aria-pressed="false"] .mark::after { content: "✓"; color: #fff; }
+  .opt.wrong { border-color: var(--alert); background: #fbeaea; opacity: 1; }
+  .opt.wrong .mark { background: var(--alert); border-color: var(--alert); }
+  .opt:disabled[aria-pressed="true"] { opacity: 1; }
+
+  .rate { display: flex; justify-content: space-between; gap: .2rem; margin: .5rem 0 .4rem; }
+  .opt.star { width: auto; flex: 1 1 0; min-height: 56px; justify-content: center; padding: 0; border: 0; background: transparent;
+    font-size: 2.3rem; color: var(--track); }
+  .opt.star.on { color: #d99a12; }
+  .opt.star[aria-pressed="true"] { background: transparent; }
+  .rate.ten .opt.star { font-size: 1.5rem; }
+  .rate-val { text-align: center; font-weight: 700; color: var(--ink-soft); margin: 0 0 1rem; }
+  .addopt { margin: -.4rem 0 1.2rem; }
+  .addopt label { display: block; font-size: .85rem; color: var(--ink-soft); margin-bottom: .3rem; }
+  .addrow { display: flex; gap: .5rem; }
+  .addrow input { flex: 1; min-height: 48px; padding: .5em .7em; border: 1.5px dashed var(--teal); border-radius: var(--radius-s); }
+  .status { margin: 0 0 .8rem; font-size: .95rem; color: var(--ink-soft); min-height: 1.6em; }
+  .done { color: var(--teal-deep); font-weight: 700; }
+  .actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .actions .btn { flex: 1 1 auto; }
+
+  .counter { text-align: right; font-size: .85rem; color: var(--ink-soft); margin-top: -.6rem; margin-bottom: 1rem; }
+  .counter.over { color: var(--alert); }
+  .bhead { display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0 .6rem; }
+  .tabs { display: inline-flex; border: 1.5px solid var(--teal); border-radius: var(--radius-s); overflow: hidden; }
+  .tabs button { border: 0; background: #fff; color: var(--teal); padding: .3rem .8rem; font-weight: 700; font-size: .85rem; }
+  .tabs button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+  .board { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+  .board li { background: var(--wash); border-radius: var(--radius-s); padding: .7rem .8rem; }
+  .board li p { margin: 0 0 .4rem; }
+  .board li.answered p { color: var(--ink-soft); }
+  .board li.empty { color: var(--ink-soft); text-align: center; }
+  .bmeta { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+  .tagm { font-size: .75rem; background: #fff; border-radius: 99px; padding: .05rem .55rem; color: var(--ink-soft); }
+  .tagm.on { background: var(--teal); color: #fff; }
+  .like { margin-left: auto; min-height: 36px; padding: 0 .8rem; border: 1.5px solid var(--teal); border-radius: 99px; background: #fff; color: var(--teal); font-weight: 700; }
+  .like[aria-pressed="true"] { background: var(--teal); color: #fff; }
+  .like:disabled { border-color: var(--line); color: var(--ink-soft); }
+  .mine { list-style: none; padding: 0; margin: 1.25rem 0 0; }
+  .mine li { padding: .5rem .75rem; background: var(--wash); border-radius: var(--radius-s); margin-bottom: .4rem; }
+
+  .waiting { text-align: center; padding: 3rem 1rem; }
+  .waiting .pulse { width: 14px; height: 14px; border-radius: 50%; background: var(--teal); margin: 0 auto 1.2rem; animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .waiting .pulse { animation: none; } }
+  .net { position: fixed; left: 1rem; right: 1rem; bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); }
+  .sep { display: flex; align-items: center; gap: .8rem; color: var(--ink-soft); font-size: .85rem; margin: 1.1rem 0; }
+  .sep::before, .sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <span class="title" id="evTitle">投票</span>
+  <span class="who" id="who"></span>
+</header>
+<main>
+  <!-- 参加コード入力（URLにコードが無いとき） -->
+  <section id="vCode" class="card hidden">
+    <h1>参加コードを入力</h1>
+    <form id="codeForm">
+      <label class="field"><span>スライドに表示されているコード</span>
+        <input id="codeInput" autocomplete="off" autocapitalize="characters" required></label>
+      <button class="btn" type="submit" style="width:100%">次へ</button>
+    </form>
+  </section>
+
+  <!-- 参加（ニックネーム設定） -->
+  <section id="vJoin" class="card hidden">
+    <h1 id="joinTitle">投票に参加</h1>
+    <form id="joinForm">
+      <label class="field"><span>ニックネーム（本名でも可・20文字まで）</span>
+        <input id="nickInput" maxlength="20" autocomplete="nickname" required placeholder="例：やくざいし太郎"></label>
+      <p class="desc" style="font-size:.85rem">ニックネームは主催者の画面にだけ表示されます。会場のスクリーンには表示されません。</p>
+      <button class="btn" type="submit" style="width:100%">この名前で参加</button>
+    </form>
+    <div id="anonWrap" class="hidden">
+      <div class="sep">または</div>
+      <button class="btn ghost" id="anonBtn" type="button" style="width:100%">匿名で参加</button>
+    </div>
+    <p class="notice error hidden" id="joinErr" role="alert" style="margin-top:1rem"></p>
+  </section>
+
+  <!-- 待機 -->
+  <section id="vWait" class="card waiting hidden" aria-live="polite">
+    <div class="pulse" aria-hidden="true"></div>
+    <h1>次の質問を待っています</h1>
+    <p class="desc" style="margin:0">スライドで質問が始まると、この画面が自動で切り替わります。<br>画面はこのまま開いておいてください。</p>
+  </section>
+
+  <!-- 質問 -->
+  <section id="vQuestion" class="card hidden">
+    <h1 id="qTitle"></h1>
+    <p class="how" id="qHow"></p>
+    <p class="desc hidden" id="qDesc"></p>
+    <div id="qBody"></div>
+  </section>
+</main>
+<p class="notice error net hidden" id="netErr" role="status"></p>
+
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(() => {
+  const { rpc, errText, esc, typeLabel, cfg } = window.VoteApp;
+  const $ = id => document.getElementById(id);
+  const views = ["vCode", "vJoin", "vWait", "vQuestion"];
+  const show = id => views.forEach(v => $(v).classList.toggle("hidden", v !== id));
+
+  const params = new URLSearchParams(location.search);
+  let code = (params.get("e") || "").trim().toUpperCase();
+  let me = null;               // { pid, token, nickname }
+  let shownKey = null;         // いま描画している質問の識別（質問ID＋受付状態＋リセット回数）
+  let shownResets = {};        // 質問ごとに最後に見たリセット回数
+  const pendingSel = {};       // 送信前の選択（質問ごと）
+  let current = null;          // 最新の質問データ
+  let busy = false;            // 送信中は再描画しない
+  let timer = null;
+
+  const storeKey = () => "vote:" + code;
+  function loadMe() { try { return JSON.parse(localStorage.getItem(storeKey()) || "null"); } catch { return null; } }
+  function saveMe(v) { try { localStorage.setItem(storeKey(), JSON.stringify(v)); } catch {} }
+  function clearMe() { try { localStorage.removeItem(storeKey()); } catch {} }
+
+  function setWho() {
+    $("who").textContent = me ? (me.nickname ? me.nickname + " で参加中" : "匿名で参加中") : "";
+  }
+
+  // ---------- 参加 ----------
+  $("codeForm").addEventListener("submit", e => {
+    e.preventDefault();
+    code = $("codeInput").value.trim().toUpperCase();
+    if (!code) return;
+    history.replaceState(null, "", "?e=" + encodeURIComponent(code));
+    start();
+  });
+
+  async function join(nick) {
+    $("joinErr").classList.add("hidden");
+    try {
+      const r = await rpc("join_event", { p_code: code, p_nickname: nick || null });
+      me = { pid: r.participant_id, token: r.token, nickname: r.nickname };
+      saveMe(me); setWho(); poll();
+    } catch (err) {
+      $("joinErr").textContent = errText(err);
+      $("joinErr").classList.remove("hidden");
+    }
+  }
+  $("joinForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const n = $("nickInput").value.trim();
+    if (!n) { $("joinErr").textContent = errText({ message: "nickname_required" }); $("joinErr").classList.remove("hidden"); return; }
+    join(n);
+  });
+  $("anonBtn").addEventListener("click", () => join(null));
+
+  // ---------- 状態の取得 ----------
+  async function poll() {
+    clearTimeout(timer);
+    if (!me) return;
+    try {
+      const s = await rpc("get_state", { p_code: code, p_pid: me.pid, p_token: me.token });
+      $("netErr").classList.add("hidden");
+      $("evTitle").textContent = s.event.title;
+      document.title = s.event.title;
+      if (s.event.theme) VoteApp.applyPalette(document.documentElement, s.event.theme.palette);
+      if (!s.participant) {
+        clearMe(); me = null; setWho(); showJoin(s.event.title);
+        $("joinErr").textContent = "参加情報がリセットされました。もう一度参加してください。";
+        $("joinErr").classList.remove("hidden");
+        return;
+      }
+      current = s.question;
+      if (!busy) render();
+    } catch (err) {
+      $("netErr").textContent = errText(err);
+      $("netErr").classList.remove("hidden");
+      if (String(err.message || "").includes("event_not_found")) { show("vCode"); $("codeInput").value = code; return; }
+    }
+    timer = setTimeout(poll, cfg.PARTICIPANT_POLL_MS || 3000);
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+
+  function showJoin(title) {
+    $("joinTitle").textContent = title || "投票に参加";
+    show("vJoin");
+  }
+
+  // ---------- 描画 ----------
+  function render() {
+    const q = current;
+    if (!q) { shownKey = null; show("vWait"); return; }
+    // 回答者が選択肢を追加できる質問では、選択肢が増えたら描き直す（選択中の内容は pendingSel に残す）
+    const key = q.id + ":" + q.voting_open + ":" + q.reset_count + ":" + !!q.reveal + ":" + (q.allow_add ? q.options.length : "");
+    if (key === shownKey) {           // 同じ質問なら触らない（選択中・入力中の状態を保つ）
+      if (q.type === "qa" || q.type === "ideas") updateBoard(q);
+      return;
+    }
+    shownKey = key;
+    const wasReset = q.id in shownResets && shownResets[q.id] !== q.reset_count;
+    shownResets[q.id] = q.reset_count;
+    const flash = wasReset ? "主催者が投票をリセットしました。もう一度回答してください。" : undefined;
+    show("vQuestion");
+    $("qTitle").textContent = q.title;
+    $("qHow").textContent = typeLabel(q);
+    $("qDesc").textContent = q.description || "";
+    $("qDesc").classList.toggle("hidden", !q.description);
+    if (q.type === "qa" || q.type === "ideas") renderBoard(q, flash, !!flash);
+    else if (q.type === "text") renderText(q, flash, !!flash); else renderChoice(q, flash, !!flash);
+  }
+
+  // ---------- 会場からの質問・アイデア募集 ----------
+  let boardSort = "top", boardQ = null;
+  function renderBoard(q, flash, flashIsNotice) {
+    boardQ = q;
+    const word = q.type === "qa" ? "質問" : "アイデア";
+    const left = () => q.max_text_answers - q.my_texts.length;
+    $("qBody").innerHTML = `
+      <label class="field"><span>${word}を書く（${q.max_text_length}文字まで）</span>
+        <textarea id="txt" rows="3"></textarea></label>
+      <p class="counter" id="cnt"></p>
+      <p class="status" id="st" aria-live="polite"></p>
+      <div class="actions"><button type="button" class="btn" id="send">投稿する</button></div>
+      <div class="bhead"><b>みんなの${word}</b>
+        <div class="tabs" role="group" aria-label="並び順">
+          <button type="button" data-sort="top" aria-pressed="${boardSort === "top"}">人気順</button>
+          <button type="button" data-sort="new" aria-pressed="${boardSort === "new"}">新着順</button></div></div>
+      <ul class="board" id="board"></ul>`;
+    const txt = $("txt"), send = $("send");
+    function upd(msg, isErr) {
+      const closed = !boardQ.voting_open, n = [...txt.value.trim()].length;
+      txt.disabled = closed || left() <= 0;
+      $("cnt").textContent = `${n} / ${q.max_text_length}`;
+      $("cnt").classList.toggle("over", n > q.max_text_length);
+      send.disabled = closed || left() <= 0 || n === 0 || n > q.max_text_length;
+      $("st").textContent = msg || (closed ? "投稿の受付は終了しました。" : left() <= 0 ? "投稿数の上限に達しました。" : `あと${left()}件 投稿できます`);
+      $("st").classList.toggle("done", !!msg && !isErr);
+    }
+    txt.addEventListener("input", () => upd());
+    send.addEventListener("click", async () => {
+      busy = true; send.disabled = true;
+      try {
+        await rpc("submit_text", { p_pid: me.pid, p_token: me.token, p_qid: q.id, p_body: txt.value });
+        q.my_texts.push(txt.value.trim()); txt.value = "";
+        upd("投稿しました。"); poll();
+      } catch (err) { upd(errText(err), true); }
+      finally { busy = false; }
+    });
+    $("qBody").querySelector(".tabs").addEventListener("click", e => {
+      const b = e.target.closest("[data-sort]"); if (!b) return;
+      boardSort = b.dataset.sort;
+      $("qBody").querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      updateBoard(boardQ);
+    });
+    $("board").addEventListener("click", async e => {
+      const b = e.target.closest("[data-like]"); if (!b) return;
+      b.disabled = true;
+      try {
+        const r = await rpc("toggle_reaction", { p_pid: me.pid, p_token: me.token, p_answer_id: b.dataset.like });
+        const p = boardQ.board.find(x => x.id === b.dataset.like);
+        if (p) { p.liked = r.liked; p.likes = r.likes; }
+        updateBoard(boardQ);
+      } catch (err) { upd(errText(err), true); b.disabled = false; }
+    });
+    upd(flash, flashIsNotice);
+    updateBoard(q);
+  }
+  function updateBoard(q) {
+    boardQ = q;
+    const el = $("board"); if (!el) return;
+    const unit = q.type === "qa" ? "賛同" : "共感";
+    const list = (q.board || []).slice().sort(boardSort === "new"
+      ? (a, b) => String(b.created_at).localeCompare(String(a.created_at))
+      : (a, b) => b.likes - a.likes || String(b.created_at).localeCompare(String(a.created_at)));
+    el.innerHTML = list.map(p => `<li class="${p.answered ? "answered" : ""}">
+        <p>${esc(p.body)}</p>
+        <div class="bmeta">
+          ${p.mine ? '<span class="tagm">あなたの投稿</span>' : ""}${p.featured ? '<span class="tagm on">スライドに表示中</span>' : ""}${p.answered ? '<span class="tagm">回答済み</span>' : ""}
+          <button type="button" class="like" data-like="${p.id}" aria-pressed="${!!p.liked}" ${p.mine ? "disabled" : ""}
+            aria-label="${unit}する">▲ ${unit} ${p.likes}</button></div></li>`).join("")
+      || `<li class="empty">まだ投稿はありません。</li>`;
+  }
+
+  function renderChoice(q, flash, flashIsNotice) {
+    const voted = q.my_choices.length > 0;
+    if (flash && flashIsNotice) delete pendingSel[q.id];   // リセットされたら選び直し
+    let sel = (pendingSel[q.id] || q.my_choices.map(c => c.option_id)).filter(id => q.options.some(o => o.id === id)); // 順位付けは順番＝順位
+    const multi = q.type === "multiple";
+    const rank = q.type === "rank";
+    const rating = q.type === "rating";
+    const need = rank ? q.rank_count : null;
+    const locked = !q.voting_open || (voted && !q.allow_change);
+
+    const list = rating
+      ? `<div class="rate" role="group" aria-label="評価">${q.options.map(o => `
+          <button type="button" class="opt star" data-id="${o.id}" data-v="${esc(o.label)}" aria-pressed="false" aria-label="${esc(o.label)}点">★</button>`).join("")}
+         </div><p class="rate-val" id="rv"></p>`
+      : `<ul class="opts">${q.options.map(o => `
+        <li><button type="button" class="opt${multi ? " multi" : ""}" data-id="${o.id}" aria-pressed="false">
+          <span class="mark" aria-hidden="true"></span><span>${esc(o.label)}</span></button></li>`).join("")}
+      </ul>`;
+    const addBox = q.allow_add && !q.quiz && (q.type === "single" || q.type === "multiple") ? `
+      <div class="addopt"><label for="newOpt">当てはまるものがなければ、自分で書いて追加</label>
+        <div class="addrow"><input id="newOpt" maxlength="40" placeholder="選択肢を入力（40文字まで）">
+        <button type="button" class="btn ghost" id="addOptBtn">追加</button></div></div>` : "";
+    $("qBody").innerHTML = `
+      ${list}${addBox}
+      <p class="status" id="st" aria-live="polite"></p>
+      <div class="actions">
+        ${rank ? '<button type="button" class="btn ghost" id="clr">やり直す</button>' : ""}
+        <button type="button" class="btn" id="send"></button>
+      </div>`;
+    const btns = [...$("qBody").querySelectorAll(".opt")];
+    if (rating && btns.length > 5) $("qBody").querySelector(".rate").classList.add("ten");
+
+    function paint(msg, isErr) {
+      if (rating) {
+        const chosen = btns.find(b => b.dataset.id === sel[0]);
+        const v = chosen ? Number(chosen.dataset.v) : 0;
+        btns.forEach(b => { b.classList.toggle("on", Number(b.dataset.v) <= v); b.setAttribute("aria-pressed", b === chosen ? "true" : "false"); b.disabled = locked; });
+        $("rv").textContent = v ? `${v} / ${btns.length}` : "星をタップして評価";
+      }
+      if (!rating) btns.forEach(b => {
+        const i = sel.indexOf(b.dataset.id);
+        b.setAttribute("aria-pressed", i >= 0 ? "true" : "false");
+        b.querySelector(".mark").textContent = i < 0 ? "" : rank ? String(i + 1) : "✓";
+        const full = (multi && sel.length >= q.max_select) || (rank && sel.length >= need);
+        b.disabled = locked || (i < 0 && full);
+        if (q.reveal) {
+          const o = q.options.find(x => x.id === b.dataset.id);
+          b.classList.toggle("correct", !!(o && o.correct));
+          b.classList.toggle("wrong", i >= 0 && !(o && o.correct));
+        }
+      });
+      const send = $("send");
+      let ok = sel.length > 0;
+      if (multi) ok = sel.length >= q.min_select && sel.length <= q.max_select;
+      if (rank) ok = sel.length === need;
+      send.textContent = voted ? "投票を変更する" : "投票する";
+      send.disabled = locked || !ok;
+      if (locked) send.textContent = !q.voting_open ? "締め切りました" : "投票済み";
+
+      let st = msg || "";
+      if (!st) {
+        if (!q.voting_open) st = voted ? "投票済みです。締め切られました。" : "締め切られました。";
+        else if (multi) st = `${sel.length} / ${q.max_select} 選択` + (q.min_select > 1 ? `（${VoteApp.tsu(q.min_select)}以上）` : "");
+        else if (rank) st = sel.length < need ? `${sel.length + 1}位にしたいものを選んでください（${sel.length} / ${need}）` : "順位が決まりました";
+        if (voted && q.voting_open) st = (st ? st + "　" : "") + "投票済み";
+        if (q.reveal) {
+          const right = new Set(q.options.filter(o => o.correct).map(o => o.id));
+          const mine = new Set(sel);
+          const hit = voted && right.size === mine.size && [...right].every(id => mine.has(id));
+          st = !voted ? "正解は ✓ の選択肢です。" : hit ? "正解です。" : "残念、不正解でした。✓ が正解です。";
+        }
+      }
+      const el = $("st");
+      el.textContent = st;
+      el.classList.toggle("done", !!msg && !isErr);
+    }
+
+    btns.forEach(b => b.addEventListener("click", () => {
+      const id = b.dataset.id, i = sel.indexOf(id);
+      if (q.type === "single" || rating) sel = [id];
+      else if (rank) { if (i >= 0) sel = sel.slice(0, i); else sel.push(id); }
+      else if (i >= 0) sel.splice(i, 1); else sel.push(id);
+      pendingSel[q.id] = sel.slice();
+      paint();
+    }));
+    if ($("addOptBtn")) $("addOptBtn").addEventListener("click", async () => {
+      const label = $("newOpt").value.trim(); if (!label) return;
+      if (multi && sel.length >= q.max_select) return paint(`選べるのは${VoteApp.tsu(q.max_select)}までです。どれかを外してから追加してください。`, true);
+      $("addOptBtn").disabled = true;
+      try {
+        const r = await rpc("add_option", { p_pid: me.pid, p_token: me.token, p_qid: q.id, p_label: label });
+        if (!q.options.some(o => o.id === r.id)) q.options.push({ id: r.id, label: r.label, user_added: true });
+        pendingSel[q.id] = q.type === "single" ? [r.id] : [...new Set([...sel, r.id])];
+        shownKey = q.id + ":" + q.voting_open + ":" + q.reset_count + ":" + !!q.reveal + ":" + q.options.length;
+        renderChoice(q, r.existed ? "同じ選択肢があったので、それを選びました。「投票する」で確定します。" : "選択肢を追加して選びました。「投票する」で確定します。");
+      } catch (err) { paint(errText(err), true); $("addOptBtn").disabled = false; }
+    });
+    if (rank) $("clr").addEventListener("click", () => { sel = []; paint(); });
+
+    $("send").addEventListener("click", async () => {
+      busy = true; $("send").disabled = true;
+      try {
+        await rpc("submit_choice", { p_pid: me.pid, p_token: me.token, p_qid: q.id, p_option_ids: sel });
+        q.my_choices = sel.map((id, i) => ({ option_id: id, rank: rank ? i + 1 : null }));
+        delete pendingSel[q.id];
+        renderChoice(q, voted ? "投票を変更しました" : "投票しました");
+      } catch (err) { paint(errText(err), true); }
+      finally { busy = false; }
+    });
+    paint(flash, flashIsNotice);
+  }
+
+  function renderText(q, flash, flashIsNotice) {
+    const left = q.max_text_answers - q.my_texts.length;
+    const closed = !q.voting_open;
+    $("qBody").innerHTML = `
+      <label class="field"><span>回答（${q.max_text_length}文字まで・短い言葉で）</span>
+        <textarea id="txt" rows="3" ${closed || left <= 0 ? "disabled" : ""}></textarea></label>
+      <p class="counter" id="cnt"></p>
+      <p class="status" id="st" aria-live="polite"></p>
+      <div class="actions"><button type="button" class="btn" id="send">送信する</button></div>
+      ${q.my_texts.length ? `<ul class="mine" aria-label="あなたの回答">${q.my_texts.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}`;
+    const txt = $("txt"), send = $("send");
+    function upd(msg, isErr) {
+      const n = [...txt.value.trim()].length;
+      $("cnt").textContent = `${n} / ${q.max_text_length}`;
+      $("cnt").classList.toggle("over", n > q.max_text_length);
+      send.disabled = closed || left <= 0 || n === 0 || n > q.max_text_length;
+      $("st").textContent = msg || (closed ? "締め切られました。" : left <= 0 ? "投稿数の上限に達しました。" : `あと${left}件 投稿できます`);
+      $("st").classList.toggle("done", !!msg && !isErr);
+    }
+    txt.addEventListener("input", () => upd());
+    send.addEventListener("click", async () => {
+      busy = true; send.disabled = true;
+      try {
+        const body = txt.value;
+        await rpc("submit_text", { p_pid: me.pid, p_token: me.token, p_qid: q.id, p_body: body });
+        q.my_texts.push(body.trim().replace(/\s+/g, " "));
+        const remain = q.max_text_answers - q.my_texts.length;
+        renderText(q, "送信しました。" + (remain > 0 ? `あと${remain}件 投稿できます` : ""));
+      } catch (err) { upd(errText(err), true); }
+      finally { busy = false; }
+    });
+    upd(flash, flashIsNotice);
+  }
+
+  // ---------- 開始 ----------
+  async function start() {
+    if (!code) { show("vCode"); return; }
+    me = loadMe(); setWho();
+    if (me) { poll(); return; }
+    try {
+      const s = await rpc("get_state", { p_code: code, p_pid: "00000000-0000-0000-0000-000000000000", p_token: "-" });
+      $("evTitle").textContent = s.event.title;
+      if (s.event.theme) VoteApp.applyPalette(document.documentElement, s.event.theme.palette);
+      $("anonWrap").classList.toggle("hidden", s.event.require_nickname !== false);
+      if (!s.event.is_open) { show("vJoin"); $("joinErr").textContent = errText({ message: "event_closed" }); $("joinErr").classList.remove("hidden"); return; }
+      showJoin(s.event.title);
+    } catch (err) {
+      show("vCode"); $("codeInput").value = code;
+      $("netErr").textContent = errText(err); $("netErr").classList.remove("hidden");
+    }
+  }
+  start();
+})();
+</script>
+</body>
+</html>

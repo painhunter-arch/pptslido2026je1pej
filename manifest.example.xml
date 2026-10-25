@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:type="ContentApp">
+  <Id>4b52dc98-0b83-40b0-9bd1-2a2d3261a063</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Symposium Vote</ProviderName>
+  <DefaultLocale>ja-JP</DefaultLocale>
+  <DisplayName DefaultValue="投票結果（自前）" />
+  <Description DefaultValue="自前の投票システムの結果や参加案内をスライドに表示します。" />
+  <IconUrl DefaultValue="https://YOUR-NAME.github.io/YOUR-REPO/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://YOUR-NAME.github.io/YOUR-REPO/assets/icon-64.png" />
+  <SupportUrl DefaultValue="https://YOUR-NAME.github.io/YOUR-REPO/" />
+  <AppDomains>
+    <AppDomain>https://YOUR-NAME.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Presentation" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://YOUR-NAME.github.io/YOUR-REPO/addin.html" />
+    <RequestedWidth>960</RequestedWidth>
+    <RequestedHeight>540</RequestedHeight>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <AllowSnapshot>true</AllowSnapshot>
+</OfficeApp>

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>投票結果</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* 投影前提：画面（またはスライド内の枠）の幅に合わせて文字が伸縮する */
+  html, body { height: 100%; }
+  body {
+    font-size: clamp(14px, 2.05vw, 44px);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 1.1em;
+    padding: 3.2vh 4vw 2.6vh; overflow: hidden;
+  }
+  body.dark { --ink: #f3f7f7; --ink-soft: #b9c7cc; --paper: #10202a; --track: #24404a; --line: #2e4a55; --teal: #3fb3a8; --teal-deep: #7fd6cc; --teal-pale: #1c3a40; background: var(--paper); }
+  body.transparent { background: transparent; }
+
+  .top { display: grid; grid-template-columns: 1fr auto; gap: 1.5em; align-items: start; }
+  h1 { font-size: 1.55em; line-height: 1.35; margin: 0; }
+  .how { margin: .35em 0 0; font-size: .8em; color: var(--teal); font-weight: 700; }
+  .how .closed { color: var(--ink-soft); margin-left: 1em; }
+  .tally { text-align: right; line-height: 1; white-space: nowrap; }
+  .tally .n { font-size: 3.2em; font-weight: 700; color: var(--teal-deep); }
+  .tally .u { font-size: .9em; margin-left: .15em; }
+  .tally .sub { display: block; font-size: .7em; color: var(--ink-soft); margin-top: .5em; }
+
+  /* 結果の枠。中身が入りきらないときは app.js が文字を自動で縮める */
+  .body { min-height: 0; overflow: hidden; --bar-h: 1em; --bar-gap: .5em;
+          display: flex; flex-direction: column; justify-content: safe center; }
+  .tally .lbl { display: block; font-size: .7em; color: var(--ink-soft); margin-bottom: .2em; }
+  .res-cloud { font-size: 1.05em; height: 100%; align-content: center; }
+  .res-empty, .veil { color: var(--ink-soft); font-size: 1.2em; text-align: center; margin-top: 2.5em; }
+
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 1em; font-size: .72em; color: var(--ink-soft); }
+  .foot .join b { color: var(--ink); font-size: 1.25em; letter-spacing: .04em; }
+  .foot .err { color: var(--alert); }
+  .foot .join { display: flex; align-items: center; gap: .8em; }
+  .foot .qrmini svg { width: 5.4em; height: 5.4em; display: block; background: #fff; padding: .15em; border-radius: 4px; }
+  body.ovdark { --ink: #f3f7f7; --ink-soft: #c9d4d8; --track: rgba(255,255,255,.18); --line: rgba(255,255,255,.25); --wash: rgba(255,255,255,.1); }
+
+  /* 質問が無いとき：参加案内 */
+  .lobby { display: grid; grid-template-columns: auto auto; gap: 2.5em; align-items: center; justify-content: center; height: 100%; }
+  .lobby .qr svg { width: min(36vh, 30vw); height: auto; display: block; background: #fff; padding: .4em; border-radius: 6px; }
+  .lobby h2 { font-size: 1.5em; margin: 0 0 .6em; }
+  .lobby .code { font-size: 3em; font-weight: 700; color: var(--teal-deep); letter-spacing: .06em; line-height: 1.1; }
+  .qronly { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em; }
+  .qronly .qr svg { height: min(78vh, 88vw); width: auto; display: block; background: #fff; }
+  .qronly .code { font-size: max(14px, 7vh); font-weight: 700; color: var(--teal-deep); letter-spacing: .06em; line-height: 1; }
+  .lobby .url { font-size: .85em; color: var(--ink-soft); word-break: break-all; margin-top: .6em; }
+</style>
+</head>
+<body>
+  <div class="top" id="top">
+    <div><h1 id="title"></h1><p class="how" id="how"></p></div>
+    <div class="tally" id="tally"></div>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="foot"><span class="join" id="join"></span><span class="err" id="err"></span></div>
+
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(() => {
+  const { rpc, errText, esc, renderResults, typeLabel, baseUrl, cfg } = window.VoteApp;
+  const $ = id => document.getElementById(id);
+  const p = new URLSearchParams(location.search);
+  const code = (p.get("e") || "").toUpperCase();
+  const key = p.get("k") || "";
+  const qkey = p.get("q") || "";                 // 空なら「いま表示中の質問」に追従
+  const autoActivate = p.get("activate") === "1"; // このページが表示されたら、その質問を聴衆に出す
+  const showJoin = p.get("join") !== "0";
+  const joinOnly = p.get("view") === "join" || p.get("view") === "qr";  // 常に参加案内（QR）を表示する
+  const qrOnly = p.get("view") === "qr";            // QRコードと参加コードだけ（小さな枠向け）
+  if (p.get("theme") === "dark") document.body.classList.add("dark");
+  if (p.get("bg") === "transparent") document.body.classList.add("transparent");
+  // デザイン：URLの指定（スライドごとの設定）＞プロジェクトの既定
+  const urlPal = p.get("pal"), urlBg = p.get("bgid"), urlOv = p.get("ov");
+  const showQr = p.get("qr") === "1";                 // この質問のスライドにも参加用QRを出す
+  let themeKey = "";
+  async function applyTheme(theme) {
+    theme = theme || {};
+    const pal = urlPal || theme.palette || "teal";
+    const bg = urlBg === "none" ? "" : (urlBg || theme.bg || "");
+    const ov = urlOv || theme.overlay || "light";
+    const k = pal + "|" + bg + "|" + ov;
+    if (k === themeKey) return; themeKey = k;
+    const dark = document.body.classList.contains("dark") || (bg && ov === "dark");
+    document.body.classList.toggle("ovdark", !!(bg && ov === "dark"));
+    VoteApp.applyPalette(document.body, pal, dark);
+    if (bg) {
+      try { VoteApp.applyBackground(document.body, await rpc("get_background", { p_code: code, p_key: key, p_id: bg }), ov); }
+      catch { VoteApp.applyBackground(document.body, ""); }
+    } else VoteApp.applyBackground(document.body, "");
+  }
+
+  const joinUrl = baseUrl() + "?e=" + encodeURIComponent(code);
+  let activated = false;
+  let timer = null;
+
+  async function activate() {
+    if (!autoActivate || !qkey || activated || document.hidden) return;
+    try { await rpc("activate_question", { p_code: code, p_key: key, p_qkey: qkey }); activated = true; }
+    catch (err) { $("err").textContent = errText(err); }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { activated = false; return; } // 次に表示されたときにもう一度出す
+    activate(); tick();
+  });
+
+  function qrSvg(text) {
+    const qr = qrcode(0, "M"); qr.addData(text); qr.make();
+    return qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  }
+
+  function lobby(data) {
+    $("top").classList.add("hidden");
+    if (qrOnly) {
+      $("body").innerHTML = `<div class="qronly"><div class="qr">${qrSvg(joinUrl)}</div><div class="code">${esc(code)}</div></div>`;
+      $("join").textContent = ""; return;
+    }
+    $("body").innerHTML = `
+      <div class="lobby">
+        <div class="qr">${qrSvg(joinUrl)}</div>
+        <div>
+          <h2>スマートフォンで投票に参加</h2>
+          <div>参加コード</div>
+          <div class="code">${esc(code)}</div>
+          <div class="url">${esc(joinUrl)}</div>
+          <p>参加 ${data.participants}人</p>
+        </div>
+      </div>`;
+    $("join").textContent = "";
+  }
+
+  async function tick() {
+    clearTimeout(timer);
+    try {
+      const data = await rpc("get_results", { p_code: code, p_key: key, p_qkey: joinOnly ? null : (qkey || null) });
+      $("err").textContent = "";
+      applyTheme(data.event && data.event.theme);
+      const q = data.question;
+      if (!q || joinOnly) { lobby(data); }
+      else {
+        $("top").classList.remove("hidden");
+        $("title").textContent = q.title;
+        $("how").innerHTML = esc(typeLabel(q)) + (q.voting_open ? "" : '<span class="closed">締め切りました</span>');
+        const t = VoteApp.tally(data);    // 右上：全投票数（選択式）／回答者数
+        $("tally").innerHTML = `<span class="lbl">${t.label}</span><span class="n">${t.n}</span><span class="u">${t.unit}</span>` +
+          `<span class="sub">${t.sub ? t.sub + "・" : ""}参加 ${data.participants}人</span>`;
+        // 下部の参加案内を先に入れてから結果を描く（結果の枠の高さを確定させてから自動調整するため）
+        $("join").innerHTML = showQr ? `<span class="qrmini">${VoteApp.qrSvg(joinUrl)}</span><span>参加 <b>${esc(code)}</b><br>${esc(joinUrl)}</span>`
+          : showJoin ? `参加 <b>${esc(code)}</b>　${esc(joinUrl)}` : "";
+        const body = $("body");
+        if (!q.results_visible) {
+          body.innerHTML = `<p class="veil">回答を受け付けています</p>`;
+        } else {
+          renderResults(body, data, { inline: true, fit: true });
+        }
+      }
+    } catch (err) {
+      $("err").textContent = errText(err);
+    }
+    timer = setTimeout(tick, cfg.PROJECTOR_POLL_MS || 2000);
+  }
+
+  window.addEventListener("resize", () => tick());   // 枠の大きさが変わったら合わせ直す
+  if (!code || !key) {
+    document.body.innerHTML = '<p class="notice error" style="margin:2rem">URLに参加コード（e）と投影用の鍵（k）が必要です。管理画面からURLをコピーしてください。</p>';
+    return;
+  }
+  activate().then(tick);
+})();
+</script>
+</body>
+</html>

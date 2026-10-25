@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>投票をスライドに入れる</title>
+<!-- Office アドインの必須ライブラリ（Microsoft の配布元から読み込む必要がある） -->
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { font-size: 13px; background: var(--paper); }
+  .screen { position: absolute; inset: 0; overflow: auto; background: var(--wash); padding: 14px 18px 18px; }
+  .screen h1 { font-size: 15px; margin: 0 0 10px; }
+  .topline { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .topline h1 { margin: 0; flex: 1 1 auto; }
+  .topline select { min-height: 32px; border: 1.5px solid var(--line); border-radius: var(--radius-s); background: #fff; padding: 0 6px; max-width: 18rem; }
+  .linkbtn { background: none; border: 0; color: var(--teal); font-weight: 700; cursor: pointer; padding: 4px 2px; }
+  .linkbtn:hover { text-decoration: underline; }
+  .card { background: #fff; border-radius: var(--radius-m); padding: 16px; max-width: 30rem; margin: 0 auto; }
+  .field input, .field select, .field textarea { min-height: 36px; padding: 6px 10px; }
+  .field { margin-bottom: 10px; }
+  .sep { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); margin: 14px 0; }
+  .sep::before, .sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .msg { min-height: 1.4em; margin: 6px 0; color: var(--ink-soft); }
+  .msg.err { color: var(--alert); }
+
+  /* 種類を選ぶタイル */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .tile {
+    display: grid; grid-template-columns: 34px 1fr; gap: 4px 10px; align-items: start; text-align: left;
+    background: #fff; border: 2px solid transparent; border-radius: var(--radius-m); padding: 12px; cursor: pointer; min-height: 76px;
+  }
+  .tile:hover { border-color: var(--teal); }
+  .tile svg { grid-row: span 2; width: 34px; height: 34px; }
+  .tile b { font-size: 14px; }
+  .tile span { color: var(--ink-soft); font-size: 12px; line-height: 1.45; }
+  .tile.sub { background: transparent; border: 2px dashed var(--line); }
+  .tile[disabled] { cursor: default; opacity: .55; }
+  .tile[disabled]:hover { border-color: transparent; }
+  .tile .soon { display: inline-block; font-size: 11px; font-weight: 700; color: var(--ink-soft); background: var(--wash); border-radius: 99px; padding: 0 8px; margin-left: 6px; }
+  .sect { margin: 0 0 18px; }
+  .sect h2 { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; font-weight: 700; }
+  .starters { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .starter { text-align: left; background: #fff; border: 2px solid transparent; border-radius: var(--radius-m); padding: 12px 14px; cursor: pointer; }
+  .starter:hover { border-color: var(--teal); }
+  .starter b { display: block; font-size: 14px; line-height: 1.45; }
+  .starter span { font-size: 12px; color: var(--teal); font-weight: 700; }
+  .genbtn { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; background: var(--teal-deep); color: #fff;
+            border: 0; border-radius: var(--radius-m); padding: 14px 16px; cursor: pointer; }
+  .genbtn b { font-size: 14px; display: block; }
+  .genbtn span { font-size: 12px; opacity: .85; }
+  .genbtn svg { flex: none; width: 30px; height: 30px; }
+  .exist { width: 100%; text-align: left; background: #fff; border: 2px solid transparent; border-radius: var(--radius-m); padding: 12px 14px; cursor: pointer; font-weight: 700; }
+  .exist:hover { border-color: var(--teal); }
+  .aibox { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--wash); }
+  .aibox b { display: block; margin-bottom: 4px; }
+  .aibox ol { margin: 0 0 10px; padding-left: 1.4em; color: var(--ink-soft); }
+  .corr { width: 34px; border: 1.5px solid var(--line); background: #fff; border-radius: var(--radius-s); cursor: pointer; color: var(--line); font-weight: 700; }
+  .corr[aria-pressed="true"] { background: var(--teal-deep); border-color: var(--teal-deep); color: #fff; }
+
+  /* 編集 */
+  .editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 720px) { .editor { grid-template-columns: 1fr; } .pv-col { display: none; } }
+  .group { background: #fff; border-radius: var(--radius-m); padding: 12px 14px; margin-bottom: 10px; }
+  .group h2 { font-size: 13px; margin: 0 0 8px; color: var(--ink-soft); font-weight: 700; }
+  .opt-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .opt-row input { flex: 1; min-height: 34px; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: var(--radius-s); }
+  .opt-row button { width: 34px; border: 1.5px solid var(--line); background: #fff; border-radius: var(--radius-s); cursor: pointer; color: var(--ink-soft); }
+  .line { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
+  .line + .line { border-top: 1px solid var(--wash); }
+  .line > span { font-weight: 700; }
+  .line small { display: block; font-weight: 400; color: var(--ink-soft); }
+
+  /* ボタン型の選択（セグメント）と増減 */
+  .seg { display: inline-flex; border: 1.5px solid var(--teal); border-radius: var(--radius-s); overflow: hidden; }
+  .seg button { border: 0; background: #fff; color: var(--teal); padding: 6px 12px; min-height: 32px; cursor: pointer; font-weight: 700; }
+  .seg button + button { border-left: 1.5px solid var(--teal); }
+  .seg button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+  .step { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: var(--radius-s); background: #fff; }
+  .step button { width: 32px; min-height: 32px; border: 0; background: none; font-size: 16px; color: var(--teal); cursor: pointer; }
+  .step button:disabled { color: var(--line); cursor: default; }
+  .step output { min-width: 2.4em; text-align: center; font-weight: 700; }
+
+  .pchips, .btiles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .pchip { display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 99px; padding: 3px 10px 3px 4px; background: #fff; cursor: pointer; font-size: 12px; }
+  .pchip i { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+  .pchip[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+  .btile { width: 96px; aspect-ratio: 16/9; border: 2px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; font-size: 11px; color: var(--ink-soft); display: grid; place-items: center; text-align: center; padding: 2px; }
+  .btile[aria-pressed="true"] { border: 3px solid var(--teal); }
+  .btile.add { border-style: dashed; color: var(--teal); font-weight: 700; }
+  .actions { position: sticky; bottom: -18px; background: var(--wash); padding: 10px 0 2px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* 見本 */
+  .pv-col { position: sticky; top: 0; }
+  .pv-cap { font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; }
+  .pv { aspect-ratio: 16 / 9; background: #fff; border-radius: var(--radius-s); box-shadow: 0 0 0 1px var(--line); overflow: hidden;
+        padding: 4% 5%; display: grid; grid-template-rows: auto 1fr auto; gap: .6em; font-size: clamp(7px, 1.25vw, 13px); }
+  .pv.dark { --ink: #f3f7f7; --ink-soft: #b9c7cc; --track: #24404a; --line: #2e4a55; --teal: #3fb3a8; --teal-deep: #7fd6cc; background: #10202a; color: var(--ink); }
+  .pv.transparent { background: repeating-conic-gradient(#eef2f2 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+  .pv .t { display: grid; grid-template-columns: 1fr auto; gap: 1em; }
+  .pv h3 { margin: 0; font-size: 1.5em; line-height: 1.3; }
+  .pv .how { color: var(--teal); font-size: .8em; font-weight: 700; margin-top: .2em; }
+  .pv .n { font-size: 2.6em; font-weight: 700; color: var(--teal-deep); line-height: 1; text-align: right; }
+  .pv .n small { font-size: .35em; color: var(--ink); font-weight: 400; }
+  .pv .b { overflow: hidden; min-height: 0; --bar-h: .9em; --bar-gap: .5em; display: flex; flex-direction: column; justify-content: safe center; }
+  .pv .n .lbl { display: block; font-size: .3em; font-weight: 400; color: var(--ink-soft); }
+  .pv .b .res-bars.inline .res-bar .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv .f { font-size: .7em; color: var(--ink-soft); display: flex; align-items: center; gap: .6em; }
+  .pv .qrmini svg { width: 4em; height: 4em; display: block; background: #fff; padding: .1em; }
+  .pv .veil { text-align: center; color: var(--ink-soft); font-size: 1.2em; }
+  .pv .lob { display: grid; grid-template-columns: auto auto; gap: 2em; align-items: center; justify-content: center; }
+  .pv .qrbox { width: 8em; height: 8em; background: repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%) 0 0 / 1em 1em; border: .4em solid #fff; }
+  .pv .code { font-size: 2.6em; font-weight: 700; color: var(--teal-deep); }
+
+  /* 作成済みの質問 */
+  .qlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .qlist button { width: 100%; text-align: left; background: #fff; border: 2px solid transparent; border-radius: var(--radius-m); padding: 10px 12px; cursor: pointer; }
+  .qlist button:hover { border-color: var(--teal); }
+  .qlist .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 99px; background: var(--teal-pale); color: var(--teal-deep); margin-right: 6px; }
+
+  /* 挿入後 */
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .bar { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; z-index: 3; }
+  .bar .tag { background: rgba(23,35,59,.82); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 99px; align-self: center; }
+</style>
+</head>
+<body>
+
+<!-- 1. 接続 -->
+<section class="screen hidden" id="sConnect">
+  <div class="card">
+    <h1>投票をスライドに入れる</h1>
+    <p class="msg" style="margin-top:0">管理画面と同じアカウントでログインすると、このスライドから質問を作成できます。初めての方は「新規登録」してから、メイン編集者から受け取ったプロジェクト番号とパスワードで参加します。</p>
+    <form id="loginForm">
+      <label class="field"><span>メールアドレス</span><input type="email" id="email" autocomplete="username" required></label>
+      <label class="field"><span>パスワード</span><input type="password" id="pw" autocomplete="current-password" required></label>
+      <button class="btn" type="submit" style="width:100%">ログイン</button>
+    </form>
+    <button class="btn ghost" type="button" id="signup" style="width:100%; margin-top:6px">この内容で新規登録</button>
+    <p class="msg err" id="loginMsg"></p>
+    <div class="sep">または</div>
+    <button class="btn ghost" type="button" id="toPaste" style="width:100%">作成済みの質問のURLを貼って表示する</button>
+  </div>
+</section>
+
+<!-- 1'. URL貼り付け（ログインしない場合） -->
+<section class="screen hidden" id="sPaste">
+  <div class="card">
+    <h1>投影用URLで接続</h1>
+    <p class="msg" style="margin-top:0">管理画面の「参加・投影用のURL」でコピーしたURLを貼り付けてください。</p>
+    <label class="field"><span>投影用URL</span><input id="pasteUrl" placeholder="https://…/projector.html?e=S11&k=…&q=Q1&activate=1"></label>
+    <div class="line"><span>スライドに来たら質問を切り替える</span><div class="seg" data-k="link"></div></div>
+    <div class="line"><span>背景</span><div class="seg" data-k="theme"></div></div>
+    <p class="msg" id="pasteMsg"></p>
+    <div style="display:flex; gap:8px; justify-content:space-between">
+      <button class="btn ghost" type="button" data-go="sConnect">戻る</button>
+      <button class="btn" type="button" id="pasteSave">スライドに表示</button>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 種類を選ぶ -->
+<section class="screen hidden" id="sPick">
+  <div class="topline">
+    <h1>このスライドに入れる投票の種類を選んでください</h1>
+    <select id="evSel" aria-label="プロジェクト"></select>
+    <button class="linkbtn" type="button" id="toJoinPj">番号とパスワードで参加</button>
+    <button class="linkbtn" type="button" id="logout">ログアウト</button>
+  </div>
+  <div id="pickBody"></div>
+</section>
+
+<!-- 2''. スライドの文字から作る -->
+<section class="screen hidden" id="sGen">
+  <div class="topline">
+    <button class="linkbtn" type="button" data-go="sPick">← 戻る</button>
+    <h1>スライドの文字から投票・クイズを作る</h1>
+  </div>
+  <div class="card" style="max-width:40rem">
+    <p class="msg" id="genMsg" style="margin-top:0"></p>
+    <label class="field"><span>スライドの文字（質問文と、「1. ○○」のような番号つきの選択肢）</span>
+      <textarea id="genText" rows="9"></textarea></label>
+    <div style="display:flex; gap:8px; justify-content:space-between; flex-wrap:wrap">
+      <button class="btn ghost" type="button" id="genRead">このスライドの文字を読み込む</button>
+      <button class="btn" type="button" id="genGo">この内容で投票を作る</button>
+    </div>
+    <div class="aibox">
+      <b>生成AI（Copilot・Claude など）でクイズを作る</b>
+      <ol>
+        <li>「依頼文をコピー」を押す（上の欄のスライドの文字が入ります）</li>
+        <li>お使いの生成AIに貼り付けて送る</li>
+        <li>返ってきた答えを上の欄に貼り付け、「この内容で投票を作る」を押す（「正解：2」の行があればクイズとして読み込みます）</li>
+      </ol>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+        <div class="seg" id="aiKind"><button type="button" data-v="quiz" aria-pressed="true">クイズ</button><button type="button" data-v="poll" aria-pressed="false">アンケート</button></div>
+        <button class="btn small" type="button" id="aiCopy">依頼文をコピー</button>
+      </div>
+      <p class="msg" style="margin-bottom:0">生成された内容（特に正解）は、必ず専門家の目で確認してから使ってください。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 1''. プロジェクトに参加（番号＋パスワード） -->
+<section class="screen hidden" id="sJoinPj">
+  <div class="card">
+    <h1>プロジェクトに参加する</h1>
+    <p class="msg" style="margin-top:0">メイン編集者から受け取ったプロジェクト番号とパスワードを入力してください。新しいプロジェクトは管理画面で作成できます。</p>
+    <label class="field"><span>プロジェクト番号（例 P-0001）</span><input id="jpNo"></label>
+    <label class="field"><span>プロジェクトのパスワード</span><input id="jpPass" autocomplete="off"></label>
+    <p class="msg err" id="jpMsg"></p>
+    <div style="display:flex; gap:8px; justify-content:space-between">
+      <button class="btn ghost" type="button" id="jpBack">戻る</button>
+      <button class="btn" type="button" id="jpGo">参加する</button>
+    </div>
+  </div>
+</section>
+
+<!-- 2'. 作成済みの質問 -->
+<section class="screen hidden" id="sList">
+  <div class="topline">
+    <button class="linkbtn" type="button" data-go="sPick">← 種類の選択に戻る</button>
+    <h1>作成済みの質問から選ぶ</h1>
+  </div>
+  <ul class="qlist" id="qlist"></ul>
+</section>
+
+<!-- 3. 質問と見せ方の設定 -->
+<section class="screen hidden" id="sEdit">
+  <div class="topline">
+    <button class="linkbtn" type="button" data-go="sPick">← 種類を選び直す</button>
+    <h1 id="edTitle"></h1>
+  </div>
+  <div class="editor">
+    <div id="edForm"></div>
+    <div class="pv-col">
+      <p class="pv-cap">スライドでの見え方（数字は見本です）</p>
+      <div class="pv" id="pv"></div>
+    </div>
+  </div>
+  <p class="msg err" id="edMsg"></p>
+  <div class="actions">
+    <button class="btn ghost" type="button" data-go="sPick">キャンセル</button>
+    <button class="btn" type="button" id="edSave">スライドに挿入</button>
+  </div>
+</section>
+
+<!-- 3'. 投稿を選ぶ（Q&A・アイデア募集） -->
+<section class="screen hidden" id="sBoard">
+  <div class="topline">
+    <button class="linkbtn" type="button" id="boardBack">← スライドに戻る</button>
+    <h1 id="boardTitle">スライドに出す投稿を選ぶ</h1>
+    <button class="linkbtn" type="button" id="boardReload">最新にする</button>
+  </div>
+  <p class="msg" id="boardMsg" style="margin-top:0"></p>
+  <ul class="qlist" id="boardList"></ul>
+</section>
+
+<!-- 4. 挿入後 -->
+<iframe id="frame" class="hidden" title="投票結果"></iframe>
+<div class="bar hidden" id="bar">
+  <span class="tag" id="tag"></span>
+  <button class="btn small hidden" id="toBoard" type="button">投稿を選ぶ</button>
+  <button class="btn small" id="toEdit" type="button">設定を変更</button>
+  <button class="btn small ghost" id="toPick" type="button" style="background:#fff">別の投票にする</button>
+</div>
+
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(() => {
+  const { sb, rpc, errText, esc, renderResults, typeLabel } = window.VoteApp;
+  const $ = id => document.getElementById(id);
+  const KEY = "voteSlide";
+
+  // ---------- 投票の種類（Slido の構成を参考） ----------
+  const ICON = {
+    choice: '<path d="M6 9h4v4H6zM14 10h14M6 18h4v4H6zM14 19h14M6 27h4v4H6zM14 28h10" />',
+    wordcloud: '<path d="M5 14h9M17 14h12M8 21h20M5 28h7M15 28h9" stroke-width="3.4"/>',
+    open: '<path d="M6 7h24v16H14l-6 6v-6H6z"/>',
+    rank: '<path d="M6 8h3v4M6 16h4l-4 5h4M6 25h4l-2 2 2 2H6M15 10h14M15 19h11M15 28h8"/>',
+    rating: '<path d="M18 5l3.8 8.1 8.7 1-6.4 6 1.7 8.7L18 24.5l-7.8 4.3 1.7-8.7-6.4-6 8.7-1z"/>',
+    join: '<path d="M6 6h9v9H6zM21 6h9v9h-9zM6 21h9v9H6zM21 21h3v3h-3zM27 27h3v3h-3zM27 21h3M21 27v3"/>',
+    quiz: '<circle cx="18" cy="18" r="12"/><path d="M14.5 14.5a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3v1M18 25.5v.5"/>',
+    qa: '<path d="M5 8h18v12H12l-5 4v-4H5zM26 14h5v11h-2v3l-4-3h-8v-2"/>',
+    ideas: '<path d="M18 5a8 8 0 0 0-5 14.3V23h10v-3.7A8 8 0 0 0 18 5zM14 27h8M15.5 31h5"/>',
+    spark: '<path d="M18 4l2.6 8.4L29 15l-8.4 2.6L18 26l-2.6-8.4L7 15l8.4-2.6zM28 25l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"/>',
+    list: '<path d="M7 9h22M7 18h22M7 27h22"/>'
+  };
+  // 「新しく作る」の並び（Slido の Start from scratch を参考）
+  const TYPES = [
+    { id: "choice",    name: "選択式",             desc: "選択肢から1つ、または複数を選ぶ（マルチプルチョイス）" },
+    { id: "wordcloud", name: "ワードクラウド",     desc: "短い言葉を集め、多い言葉ほど大きく表示" },
+    { id: "open",      name: "自由意見",           desc: "文章で答えてもらい、一覧で表示" },
+    { id: "quiz",      name: "クイズ",             desc: "正解を設定し、あとから正解を公開" },
+    { id: "rank",      name: "ランキング",         desc: "選択肢に順位をつけ、得点順に表示" },
+    { id: "rating",    name: "評価（星）",         desc: "1〜5 または 1〜10 の星で評価し、平均を表示" },
+    { id: "qa",        name: "会場からの質問（Q&A）", desc: "聴衆が質問を投稿・賛同。選んだ質問をスライドに表示" },
+    { id: "ideas",     name: "アイデア募集",       desc: "アイデアを投稿・共感。選んだアイデアをスライドに表示" },
+    { id: "join",      name: "参加案内スライド",   desc: "QRコードと参加コードを大きく表示" }
+  ];
+  // 「よく使う質問から始める」（Slido の Start with を参考）
+  const STARTERS = [
+    { kind: "wordcloud", title: "このシンポジウムで、何を持ち帰りたいですか？", label: "ワードクラウド" },
+    { kind: "rating",    title: "このシンポジウムは、どのくらい役に立ちましたか？", label: "評価（星）" }
+  ];
+  const typeName = id => (TYPES.find(t => t.id === id) || {}).name || "";
+
+  // ---------- 保存先（PowerPoint では文書内、ブラウザ確認時は端末内） ----------
+  const inOffice = () => !!(window.Office && Office.context && Office.context.document && Office.context.document.settings);
+  const store = {
+    get() { try { return inOffice() ? Office.context.document.settings.get(KEY) : JSON.parse(localStorage.getItem("addin-demo") || "null"); } catch { return null; } },
+    set(v) {
+      return new Promise((res, rej) => {
+        if (!inOffice()) { localStorage.setItem("addin-demo", JSON.stringify(v)); return res(); }
+        Office.context.document.settings.set(KEY, v);
+        Office.context.document.settings.saveAsync(r => r.status === Office.AsyncResultStatus.Succeeded ? res() : rej(r.error));
+      });
+    }
+  };
+
+  let cfg = null;            // スライドの設定 { e, k, q, view, link, join, theme, slideId }
+  let mode = "edit";         // "edit" / "read"（スライドショー）
+  let events = [], ev = null, questions = [];
+  let st = null;             // 編集中の内容
+
+  const screens = ["sConnect", "sPaste", "sJoinPj", "sPick", "sList", "sGen", "sEdit", "sBoard"];
+  function show(id) {
+    screens.forEach(s => $(s).classList.toggle("hidden", s !== id));
+    $("frame").classList.toggle("hidden", !!id);
+    $("bar").classList.toggle("hidden", !!id || mode !== "edit");
+  }
+  document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+  function go(id) { if (id === "sPick") return openPick(); show(id); }
+
+  // ---------- 起動 ----------
+  Office.onReady(() => {
+    cfg = store.get();
+    if (inOffice()) {
+      Office.context.document.getActiveViewAsync(r => setMode(r.status === Office.AsyncResultStatus.Succeeded ? r.value : "edit"));
+      Office.context.document.addHandlerAsync(Office.EventType.ActiveViewChanged, a => setMode(a.activeView));
+    } else setMode("edit");
+  });
+  function setMode(v) {
+    mode = v === "read" || (window.Office && Office.ActiveView && v === Office.ActiveView.Read) ? "read" : "edit";
+    stopWatch();
+    if (cfg && mode === "edit" && (!cfg.k || cfg.autoSlide)) { completeEmbedded(); return; }
+    if (cfg) { showFrame(); if (mode === "read" && cfg.link && cfg.view === "result" && cfg.q) startWatch(); }
+    else if (mode === "edit") start();
+  }
+
+  // ---------- あらかじめスライドに組み込まれた枠の補完 ----------
+  // 配布用の PowerPoint には、参加コード・質問・表示方法だけが入っている（投影用の鍵は入っていない）。
+  // 編集者が最初に開いてログインすると、そのプロジェクトの鍵とこのスライドの番号を自動で入れて保存する。
+  let pendingEmbed = false;
+  async function completeEmbedded() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) {
+      pendingEmbed = true; show("sConnect");
+      $("loginMsg").textContent = `このスライドの投票枠を、参加コード「${cfg.e}」のプロジェクトにつなぎます。編集者のアカウントでログインしてください。`;
+      return;
+    }
+    try {
+      if (!cfg.k) {
+        const { data: rows, error } = await sb.from("events").select("code,projector_key").eq("code", cfg.e).limit(1);
+        if (error) throw error;
+        if (!rows || !rows.length) {
+          pendingEmbed = false; show("sJoinPj");
+          $("jpMsg").textContent = `参加コード「${cfg.e}」のプロジェクトに、まだ参加していません。プロジェクト番号とパスワードで参加すると、自動でつながります。`;
+          pendingEmbed = true; return;
+        }
+        cfg.k = rows[0].projector_key;
+      }
+      if (cfg.autoSlide) { const id = await currentSlideId(); if (id !== null) cfg.slideId = id; delete cfg.autoSlide; }
+      await store.set(cfg);
+      pendingEmbed = false; showFrame();
+    } catch (err) { show("sConnect"); $("loginMsg").textContent = errText(err); }
+  }
+  async function start() {
+    const { data } = await sb.auth.getSession();
+    if (data.session) return openPick();
+    show("sConnect");
+  }
+
+  // ---------- ログイン ----------
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    $("loginMsg").textContent = "";
+    const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pw").value });
+    if (error) return ($("loginMsg").textContent = "メールアドレスまたはパスワードが違います。");
+    if (pendingEmbed) return completeEmbedded();
+    openPick();
+  });
+  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); show("sConnect"); });
+  $("signup").addEventListener("click", async () => {
+    if (!$("loginForm").reportValidity()) return;
+    const { data, error } = await sb.auth.signUp({ email: $("email").value.trim(), password: $("pw").value });
+    if (error) return ($("loginMsg").textContent = /not allowed|disabled|signup/i.test(error.message) ? "新規登録は受け付けていません。伊東から届いたアカウント（メールアドレスとパスワード）でログインしてください。" : "登録できませんでした：" + error.message);
+    if (!data.session) return ($("loginMsg").textContent = "確認メールを送りました。メールのリンクを開いてから、ここでログインしてください。");
+    openPick();
+  });
+  $("toJoinPj").addEventListener("click", () => show("sJoinPj"));
+  $("jpBack").addEventListener("click", () => openPick());
+  $("jpGo").addEventListener("click", async () => {
+    try {
+      const r = await rpc("join_project", { p_project_no: $("jpNo").value.trim(), p_passphrase: $("jpPass").value.trim() });
+      if (!r.ok) throw { message: r.error };
+      localStorage.setItem("vote-admin-ev", r.id);
+      if (pendingEmbed) return completeEmbedded();
+      openPick();
+    } catch (err) { $("jpMsg").textContent = errText(err); }
+  });
+
+  // ---------- 種類を選ぶ ----------
+  async function loadEvents() {
+    const { data, error } = await sb.from("events").select("*").order("created_at");
+    if (error) throw error;
+    events = data;
+    $("evSel").innerHTML = events.map(e => `<option value="${e.id}">${esc(e.project_no || "")}　${esc(e.code)}　${esc(e.title)}</option>`).join("");
+    const keep = (cfg && events.find(e => e.code === cfg.e)) || events.find(e => e.id === localStorage.getItem("vote-admin-ev")) || events[events.length - 1];
+    if (keep) $("evSel").value = keep.id;
+    ev = events.find(e => e.id === $("evSel").value) || null;
+  }
+  async function loadQuestions() {
+    const { data, error } = await sb.from("questions").select("*, options(id,label,sort_order,is_correct,user_added)").eq("event_id", ev.id).order("sort_order").order("created_at");
+    if (error) throw error;
+    data.forEach(q => q.options.sort((a, b) => a.sort_order - b.sort_order));
+    questions = data;
+  }
+  $("evSel").addEventListener("change", async () => { ev = events.find(e => e.id === $("evSel").value); localStorage.setItem("vote-admin-ev", ev.id); await loadQuestions(); });
+
+  async function openPick() {
+    try { await loadEvents(); if (ev) await loadQuestions(); }
+    catch (err) { show("sConnect"); $("loginMsg").textContent = errText(err); return; }
+    const svg = id => `<svg viewBox="0 0 36 36" fill="none" stroke="var(--teal)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg>`;
+    const tile = t => `<button class="tile" type="button" data-type="${t.id}" ${t.soon ? "disabled" : ""}>${svg(t.id)}
+        <b>${esc(t.name)}${t.soon ? '<span class="soon">準備中</span>' : ""}</b><span>${esc(t.desc)}</span></button>`;
+    if (!ev) { show("sJoinPj"); $("jpMsg").textContent = "まだ参加しているプロジェクトがありません。"; return; }
+    $("pickBody").innerHTML = `
+      <div class="sect"><h2>よく使う質問から始める</h2><div class="starters">${STARTERS.map((x, i) =>
+        `<button class="starter" type="button" data-starter="${i}"><b>${esc(x.title)}</b><span>${esc(x.label)}</span></button>`).join("")}</div></div>
+      <div class="sect"><button class="genbtn" type="button" id="toGen">
+          <svg viewBox="0 0 36 36" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round">${ICON.spark}</svg>
+          <div><b>スライドの文字から投票・クイズを作る</b><span>スライドの質問文と「1. ○○」形式の選択肢を読み取ります。Copilot などの生成AIでクイズの下書きを作ることもできます</span></div></button></div>
+      <div class="sect"><h2>新しく作る</h2><div class="tiles">${TYPES.map(tile).join("")}</div></div>
+      <div class="sect"><h2>作成済みの質問</h2><button class="exist" type="button" id="toList">作成済みの質問（${questions.length}）から選ぶ</button></div>`;
+    show("sPick");
+  }
+  $("pickBody").addEventListener("click", e => {
+    if (!ev) return;
+    if (e.target.closest("#toList")) return openList();
+    if (e.target.closest("#toGen")) return openGen();
+    const sx = e.target.closest("[data-starter]");
+    if (sx) { const x = STARTERS[+sx.dataset.starter]; const s0 = newState(x.kind); s0.title = x.title; return openEditor(s0); }
+    const t = e.target.closest("[data-type]"); if (!t || t.disabled) return;
+    openEditor(newState(t.dataset.type));
+  });
+
+  // ---------- スライドの文字から作る ----------
+  // PowerPoint の JavaScript API（PowerPointApi 1.5 以降）でこのスライドの文字を読み取る。
+  // 読み取れない環境では、文字を貼り付けてもらう。
+  function openGen() {
+    $("genText").value = ""; $("genMsg").textContent = "";
+    show("sGen"); readSlideText();
+  }
+  async function readSlideText() {
+    const m = t => ($("genMsg").textContent = t);
+    const ok = window.PowerPoint && Office.context.requirements && Office.context.requirements.isSetSupported("PowerPointApi", "1.5");
+    if (!ok) return m("この PowerPoint では自動で読み込めません。スライドの文字をコピーして、下の欄に貼り付けてください。");
+    try {
+      const text = await PowerPoint.run(async ctx => {
+        const slides = ctx.presentation.getSelectedSlides(); slides.load("items"); await ctx.sync();
+        if (!slides.items.length) return "";
+        const shapes = slides.items[0].shapes; shapes.load("items"); await ctx.sync();
+        const out = [];
+        for (const sh of shapes.items) {            // 文字のない図形（画像など）で止まらないよう1つずつ読む
+          try { const tr = sh.textFrame.textRange; tr.load("text"); await ctx.sync(); if (tr.text) out.push(tr.text); } catch { }
+        }
+        return out.join("\n");
+      });
+      $("genText").value = text;
+      m(text ? "スライドの文字を読み込みました。必要なら直してから「この内容で投票を作る」を押してください。" : "文字が見つかりませんでした。貼り付けてください。");
+    } catch (err) { m("読み込めませんでした。スライドの文字を貼り付けてください。"); }
+  }
+  $("genRead").addEventListener("click", readSlideText);
+  let aiKind = "quiz";
+  $("aiKind").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    aiKind = b.dataset.v;
+    $("aiKind").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
+  $("aiCopy").addEventListener("click", async () => {
+    const src = $("genText").value.trim() || "（ここにスライドの内容を貼り付けてください）";
+    const prompt = aiKind === "quiz"
+      ? `次のスライドの内容をもとに、学会シンポジウムの聴衆（薬剤師・医療者）向けの4択クイズを1問作ってください。\n正解は1つだけにし、誤りの選択肢も現場で迷いやすいものにしてください。\n出力は次の形式だけにし、説明や前置きは書かないでください。\n\n質問：〇〇〇？\n1. 〇〇〇\n2. 〇〇〇\n3. 〇〇〇\n4. 〇〇〇\n正解：（番号）\n\n――スライドの内容――\n${src}`
+      : `次のスライドの内容をもとに、学会シンポジウムの聴衆（薬剤師・医療者）に問いかける選択式アンケートを1問作ってください。\n選択肢は4〜6個、最後は「その他」にしてください。\n出力は次の形式だけにし、説明や前置きは書かないでください。\n\n質問：〇〇〇？\n1. 〇〇〇\n2. 〇〇〇\n3. 〇〇〇\n4. その他\n\n――スライドの内容――\n${src}`;
+    try { await navigator.clipboard.writeText(prompt); $("genMsg").textContent = "依頼文をコピーしました。生成AIに貼り付けてください。"; }
+    catch { $("genText").value = prompt; $("genMsg").textContent = "コピーできなかったため、依頼文を欄に表示しました。全体を選んでコピーしてください。"; }
+  });
+  $("genGo").addEventListener("click", () => {
+    const g = parseSlide($("genText").value);
+    if (!g.title) return ($("genMsg").textContent = "質問文が見つかりません。");
+    const s0 = newState(g.options.length >= 2 ? (g.correct.length ? "quiz" : "choice") : "wordcloud");
+    s0.title = g.title;
+    if (g.options.length > 10) $("edMsg").textContent = "";
+    const over = g.options.length > 10;
+    if (g.options.length >= 2) { s0.options = g.options.slice(0, 10); if (g.max > 1) { s0.multi = true; s0.max = Math.min(g.max, g.options.length); } }
+    if (g.correct.length) { s0.correct = g.correct; if (g.correct.length > 1) { s0.multi = true; s0.max = Math.max(s0.max, g.correct.length); } }
+    openEditor(s0);
+    $("edMsg").textContent = over ? `選択肢が${g.options.length}件あったため、先頭の10件を使いました。` : "";
+  });
+  // 質問文：「？」で終わる行、または「ください」を含む行。選択肢：「1. ○○」「①○○」「A) ○○」の行
+  function parseSlide(text) {
+    const lines = text.split(/\r?\n|\v|\u2028/).map(x => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+    const optRe = /^(?:[0-9０-９]{1,2}\s*[.．、:：)）]|[①-⑳]|[(（][0-9０-９]{1,2}[)）]|[A-Za-zＡ-Ｚ]\s*[.．)）])\s*(.+)$/;
+    const options = [], rest = [];
+    let correct = [];
+    for (const l of lines) {
+      const cm = l.normalize("NFKC").match(/^(?:正解|答え|こたえ)\s*[:：]?\s*([0-9][0-9,、\s]*)/);
+      if (cm) { correct = cm[1].split(/[,、\s]+/).map(Number).filter(Boolean).map(n => n - 1); continue; }
+      const mm = l.match(optRe); if (mm) options.push(mm[1].trim()); else rest.push(l.replace(/^(?:質問|問題|Q)\s*[:：.．]\s*/, ""));
+    }
+    const title = (rest.find(l => /[？?]$|ください|ですか/.test(l)) || rest[0] || "").replace(/[。．]$/, "");
+    const mx = title.normalize("NFKC").match(/([0-9]{1,2}|[一二三四五六七八九十])(?:つ|個)まで/);
+    const max = mx ? Math.min(10, ({ 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }[mx[1]] || +mx[1])) : 1;
+    return { title, options, max, correct: correct.filter(i => i >= 0 && i < options.length) };
+  }
+
+  function openList() {
+    $("qlist").innerHTML = questions.map(q => `<li><button type="button" data-id="${q.id}">
+        <span class="tag">${esc(q.qkey)}</span><span class="tag">${esc(typeName(kindOf(q)))}</span><br>${esc(q.title)}</button></li>`).join("")
+      || '<li class="msg">このセッションには、まだ質問がありません。</li>';
+    show("sList");
+  }
+  $("qlist").addEventListener("click", e => {
+    const b = e.target.closest("[data-id]"); if (!b) return;
+    openEditor(stateFrom(questions.find(q => q.id === b.dataset.id)));
+  });
+
+  // ---------- 編集内容 ----------
+  const kindOf = q => q.type === "qa" ? "qa" : q.type === "ideas" ? "ideas" : q.quiz ? "quiz" : q.type === "single" || q.type === "multiple" ? "choice" : q.type === "rank" ? "rank" : q.type === "rating" ? "rating" : q.text_view === "list" ? "open" : "wordcloud";
+  function newState(kind) {
+    return {
+      kind, qid: null, qkey: null, title: "", options: kind === "choice" || kind === "rank" || kind === "quiz" ? ["", "", ""] : [], correct: [],
+      multi: false, min: 1, max: 2, rankN: 3, scale: 5, allowAdd: false,
+      tmax: kind === "open" ? 1 : 3, tlen: kind === "open" || kind === "qa" || kind === "ideas" ? 100 : 20, board: "pick",
+      disp: "both", sortm: kind === "rank" ? "desc" : "original", vis: true, allowChange: true,
+      link: true, join: true, theme: "", pal: cfg?.pal || "", bgsel: cfg?.bgsel || "default", ov: cfg?.ov || "light", qr: false
+    };
+  }
+  function stateFrom(q) {
+    const s = newState(kindOf(q));
+    Object.assign(s, {
+      qid: q.id, qkey: q.qkey, title: q.title, options: q.type === "rating" ? [] : q.options.filter(o => !o.user_added).map(o => o.label),
+      correct: q.options.filter(o => !o.user_added).map((o, i) => o.is_correct ? i : -1).filter(i => i >= 0),
+      multi: q.type === "multiple", min: q.min_select, max: Math.max(2, q.max_select),
+      rankN: q.rank_count || q.options.length, scale: q.type === "rating" ? q.options.length : 5,
+      allowAdd: !!q.allow_add, tmax: q.max_text_answers, tlen: q.max_text_length, disp: q.display_mode, sortm: q.sort_mode, board: q.board_mode || "pick",
+      vis: q.results_visible, allowChange: q.allow_change
+    });
+    if (cfg && cfg.q === q.qkey) Object.assign(s, { link: cfg.link, join: cfg.join, pal: cfg.pal || "", bgsel: cfg.bgsel || "default", ov: cfg.ov || "light", qr: !!cfg.qr });
+    return s;
+  }
+
+  // ---------- 編集画面 ----------
+  const SEGS = {
+    multi:       [[false, "1つだけ"], [true, "複数選べる"]],
+    disp:        [["percent", "％"], ["count", "件数"], ["both", "両方"]],
+    sortm:       [["original", "選択肢の順"], ["desc", "多い順"]],
+    vis:         [[true, "すぐ見せる"], [false, "投票中は隠す"]],
+    allowChange: [[true, "できる"], [false, "できない"]],
+    link:        [[true, "する"], [false, "しない"]],
+    join:        [[true, "表示"], [false, "隠す"]],
+    theme:       [["", "白"], ["dark", "濃紺"], ["transparent", "透明"]],
+    scale:       [[5, "5段階"], [10, "10段階"]],
+    tlen:        [[20, "20字"], [40, "40字"], [100, "100字"], [200, "200字"]],
+    board:       [["pick", "選んだ投稿だけ"], ["top", "賛同の多い順"]],
+    qr:          [[false, "表示しない"], [true, "右下に表示"]],
+    ov:          [["light", "白く薄める"], ["dark", "暗く沈める"], ["none", "そのまま"]],
+    allowAdd:    [[false, "許可しない"], [true, "許可する（数の上限なし）"]]
+  };
+  const seg = k => `<div class="seg" data-k="${k}">${SEGS[k].map(([v, l]) =>
+    `<button type="button" data-v='${JSON.stringify(v)}' aria-pressed="${st[k] === v}">${l}</button>`).join("")}</div>`;
+  const step = (k, lo, hi) => `<div class="step" data-k="${k}" data-lo="${lo}" data-hi="${hi}">
+    <button type="button" data-d="-1" aria-label="減らす" ${st[k] <= lo ? "disabled" : ""}>−</button><output>${st[k]}</output>
+    <button type="button" data-d="1" aria-label="増やす" ${st[k] >= hi ? "disabled" : ""}>＋</button></div>`;
+  const line = (label, ctl, note) => `<div class="line"><span>${label}${note ? `<small>${note}</small>` : ""}</span>${ctl}</div>`;
+
+  async function openEditor(s) {
+    st = s;
+    await loadBgs().catch(() => (bgs = []));
+    $("edTitle").textContent = (st.qid ? `${st.qkey} を編集：` : "") + typeName(st.kind);
+    $("edSave").textContent = st.qid ? "保存してスライドに表示" : "スライドに挿入";
+    $("edMsg").textContent = "";
+    renderForm(); show("sEdit");
+  }
+
+  function renderForm() {
+    const k = st.kind, n = filled().length;
+    let h = "";
+    if (k !== "join") {
+      h += `<div class="group"><h2>質問</h2>
+        <textarea id="fTitle" rows="2" style="width:100%; border:1.5px solid var(--line); border-radius:6px; padding:6px 10px"
+          placeholder="例：この時点で、最も重要だと考える問題は？">${esc(st.title)}</textarea></div>`;
+    }
+    if (k === "choice" || k === "rank" || k === "quiz") {
+      h += `<div class="group"><h2>選択肢${k === "quiz" ? "（✓ を押して正解を指定）" : ""}</h2><div id="opts">${st.options.map((o, i) => `
+          <div class="opt-row">${k === "quiz" ? `<button type="button" class="corr" data-corr="${i}" aria-pressed="${st.correct.includes(i)}" aria-label="選択肢${i + 1}を正解にする">✓</button>` : ""}
+          <input data-i="${i}" value="${esc(o)}" placeholder="選択肢 ${i + 1}">
+          <button type="button" data-del="${i}" aria-label="選択肢${i + 1}を削除">×</button></div>`).join("")}</div>
+        <button class="btn small ghost" type="button" id="addOpt" ${st.options.length >= 10 ? "disabled" : ""}>＋ 選択肢を追加</button>
+        <span class="msg" style="margin-left:8px">${st.options.length}/10件（作成できる選択肢は10件まで）</span></div>`;
+    }
+    h += `<div class="group"><h2>答え方</h2>`;
+    if (k === "choice" || k === "quiz") {
+      h += line("回答方法", seg("multi"), k === "quiz" ? "正解が複数ある場合は「複数選べる」" : "");
+      if (st.multi) h += line("選べる数（最大）", step("max", Math.max(2, st.min), maxHi()), "10件まで") + line("選べる数（最少）", step("min", 1, st.max));
+      if (k === "choice") h += line("回答者による選択肢の追加", seg("allowAdd"), "「その他」を回答者が自分で書いて追加できる。追加された選択肢はほかの人も選べる");
+    }
+    if (k === "rank") h += line("順位をつける数", step("rankN", 2, Math.max(2, n)), "上位いくつに順位をつけるか");
+    if (k === "rating") h += line("段階", seg("scale"));
+    if (k === "qa" || k === "ideas") {
+      h += line("1人あたりの投稿数", step("tmax", 1, 10)) + line("文字数の上限", seg("tlen"));
+    }
+    if (k === "wordcloud" || k === "open") {
+      h += line("1人あたりの投稿数", step("tmax", 1, 10)) + line("文字数の上限", seg("tlen"), k === "wordcloud" ? "ワードクラウドは短い言葉ほど見やすい" : "");
+    }
+    if (["choice", "quiz", "rank", "rating"].includes(k)) h += line("投票後の変更", seg("allowChange"));
+    h += `</div><div class="group"><h2>スライドでの見せ方</h2>`;
+    if (k === "choice" || k === "quiz") h += line("並び順", seg("sortm"), "「多い順」でランキング表示");
+    if (["choice", "quiz", "rating"].includes(k)) h += line("数値", '<span style="color:var(--ink-soft)">全投票数に対する％と件数</span>', "全投票数はスライドの右上に表示");
+    if (k === "quiz") h += line("正解の公開", '<span style="color:var(--ink-soft)">管理画面の「正解を出す」</span>', "押すと投票を締め切り、スライドと聴衆の端末に正解が表示される");
+    if (k === "qa" || k === "ideas") h += line("スライドへの出し方", seg("board"),
+      st.board === "pick" ? "管理画面（またはこの枠の「投稿を選ぶ」）で選んだ投稿だけを表示" : "賛同の多い上位5件を自動で表示");
+    if (k !== "join") h += line(k === "qa" || k === "ideas" ? "投稿の表示" : "投票中の結果", seg("vis"), "隠した結果は管理画面の「結果を出す」で表示");
+    if (k !== "join") h += line("スライド連動", seg("link"), "スライドショーでこのスライドに来たら、聴衆の端末にこの質問を出す");
+    if (k !== "join") h += line("下部の参加コード", seg("join"));
+    if (k !== "join") h += line("参加用QRコード", seg("qr"), "1枚目の参加案内に加えて、このスライドの右下にもQRを出す");
+    h += designBlock();
+    h += `</div>`;
+    $("edForm").innerHTML = h;
+    renderPreview();
+  }
+  const filled = () => st.options.map(s => s.trim()).filter(Boolean);
+
+  // ---------- このスライドの配色・背景 ----------
+  let bgs = [];   // プロジェクトに登録済みの背景画像
+  async function loadBgs() {
+    const { data } = await sb.from("backgrounds").select("id,name,data").eq("event_id", ev.id).order("created_at");
+    bgs = data || [];
+  }
+  function designBlock() {
+    const P = VoteApp.PALETTES, projPal = (ev.theme || {}).palette || "teal";
+    const chip = (v, label, color) => `<button type="button" class="pchip" data-pal="${v}" aria-pressed="${st.pal === v}">
+        <i style="background:${color}"></i>${label}</button>`;
+    const bgTile = (v, label, style) => `<button type="button" class="btile" data-bgsel="${v}" aria-pressed="${st.bgsel === v}" style="${style || ""}">${label}</button>`;
+    let h = `<div class="line" style="display:block"><span>配色</span><div class="pchips">` +
+      chip("", `プロジェクトの既定（${P[projPal].name}）`, P[projPal].main) +
+      Object.entries(P).map(([k, p]) => chip(k, p.name, p.main)).join("") + `</div></div>`;
+    h += `<div class="line" style="display:block"><span>背景</span><div class="btiles">` +
+      bgTile("default", "プロジェクトの既定") + bgTile("white", "白") + bgTile("dark", "濃紺", "background:#10202a;color:#fff") +
+      bgTile("transparent", "透明（スライドの背景を生かす）") +
+      bgs.map(b => bgTile(b.id, "", `background-image:url('${b.data}');background-size:cover`)).join("") +
+      `<label class="btile add">＋ 画像を追加<input type="file" id="bgUp" accept="image/*" hidden></label></div></div>`;
+    if (isImageBg()) h += line("文字を読みやすく", seg("ov"));
+    return h;
+  }
+  const isImageBg = () => st.bgsel !== "default" && !["white", "dark", "transparent"].includes(st.bgsel) ||
+    (st.bgsel === "default" && !!(ev.theme || {}).bg);
+  $("edForm").addEventListener("click", e => {
+    const pc = e.target.closest("[data-pal]"); if (pc) { st.pal = pc.dataset.pal; renderForm(); return; }
+    const bt = e.target.closest("[data-bgsel]"); if (bt) { st.bgsel = bt.dataset.bgsel; renderForm(); }
+  });
+  $("edForm").addEventListener("change", async e => {
+    if (e.target.id !== "bgUp") return;
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const data = await VoteApp.compressImage(f);
+      const { data: r, error } = await sb.from("backgrounds").insert({ event_id: ev.id, name: f.name, data }).select("id").single();
+      if (error) throw error;
+      await loadBgs(); st.bgsel = r.id; renderForm();
+    } catch (err) { $("edMsg").textContent = errText(err); }
+  });
+  // スライドの設定 → 投影画面のURL指定
+  function designParams(c) {
+    const u = {};
+    if (c.pal) u.pal = c.pal;
+    if (c.bgsel === "white") u.bgid = "none";
+    else if (c.bgsel === "dark") { u.theme = "dark"; u.bgid = "none"; }
+    else if (c.bgsel === "transparent") { u.bg = "transparent"; u.bgid = "none"; }
+    else if (c.bgsel && c.bgsel !== "default") { u.bgid = c.bgsel; u.ov = c.ov || "light"; }
+    else if (c.ov) u.ov = c.ov;
+    if (c.qr) u.qr = "1";
+    return u;
+  }
+
+  $("edForm").addEventListener("input", e => {
+    if (e.target.id === "fTitle") st.title = e.target.value;
+    if (e.target.dataset.i !== undefined) st.options[+e.target.dataset.i] = e.target.value;
+    clampAll(); renderPreview(true);
+  });
+  $("edForm").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "addOpt") { if (st.options.length >= 10) return; st.options.push(""); renderForm(); const ins = $("opts").querySelectorAll("input"); ins[ins.length - 1].focus(); return; }
+    if (b.dataset.del !== undefined) {
+      const d = +b.dataset.del;
+      if (st.options.length > 2) { st.options.splice(d, 1); st.correct = st.correct.filter(i => i !== d).map(i => i > d ? i - 1 : i); }
+      clampAll(); renderForm(); return;
+    }
+    if (b.dataset.corr !== undefined) {
+      const c = +b.dataset.corr;
+      if (st.multi) st.correct = st.correct.includes(c) ? st.correct.filter(i => i !== c) : [...st.correct, c];
+      else st.correct = [c];
+      renderForm(); return;
+    }
+    const sg = b.closest(".seg"); if (sg) { st[sg.dataset.k] = JSON.parse(b.dataset.v); clampAll(); renderForm(); return; }
+    const sp = b.closest(".step"); if (sp) {
+      const kk = sp.dataset.k; st[kk] = Math.min(+sp.dataset.hi, Math.max(+sp.dataset.lo, st[kk] + +b.dataset.d)); clampAll(); renderForm();
+    }
+  });
+  const maxHi = () => st.allowAdd ? 10 : Math.min(10, Math.max(2, filled().length));
+  function clampAll() {
+    const n = Math.max(2, filled().length);
+    st.max = Math.min(Math.max(2, st.max), maxHi()); st.min = Math.min(Math.max(1, st.min), st.max);
+    st.rankN = Math.min(Math.max(2, st.rankN), n);
+    if (st.kind === "quiz" && !st.multi && st.correct.length > 1) st.correct = st.correct.slice(0, 1);
+  }
+
+  // ---------- 見本 ----------
+  const SAMPLE_WORDS = ["夜間の相談先", "家族の負担", "服薬管理", "夜間の相談先", "痛みの評価", "訪問看護", "家族の負担", "夜間の相談先", "職場の理解", "レスキュー", "通院手段", "家族の負担"];
+  const SAMPLE_TEXTS = ["お父様の介護を誰が担っているか確認したい", "夜間・休日に相談できる窓口", "仕事を続けることの本人にとっての意味", "レスキューの使い方を本人が理解できているか"];
+  function renderPreview(soft) {
+    const pv = $("pv");
+    const dp = designParams(st), th = ev.theme || {};
+    const pvDark = dp.theme === "dark";
+    const bgId = dp.bgid === "none" ? "" : (dp.bgid || th.bg || "");
+    const ov = dp.ov || th.overlay || "light";
+    pv.className = "pv" + (pvDark ? " dark" : "") + (dp.bg === "transparent" ? " transparent" : "") + (bgId && ov === "dark" ? " dark" : "");
+    VoteApp.applyPalette(pv, st.pal || th.palette, pvDark || (bgId && ov === "dark"));
+    const bgData = bgId ? ((bgs.find(b => b.id === bgId) || {}).data || "") : "";
+    pv.style.backgroundImage = ""; if (bgData) VoteApp.applyBackground(pv, bgData, ov);
+    const k = st.kind;
+    if (k === "join") {
+      pv.innerHTML = `<div></div><div class="lob"><div class="qrbox"></div><div><div style="font-weight:700">スマートフォンで投票に参加</div>
+        <div style="color:var(--ink-soft)">参加コード</div><div class="code">${esc(ev ? ev.code : "S11")}</div></div></div><div></div>`;
+      return;
+    }
+    if (k === "qa" || k === "ideas") {
+      const samples = k === "qa"
+        ? [["在宅移行時、レスキューの回数の目安はどう伝えていますか？", 18, true], ["病棟薬剤師と薬局薬剤師の情報共有の様式はありますか？", 11, false], ["就労を続ける患者さんへの服薬指導の工夫は？", 7, false]]
+        : [["退院前カンファレンスに薬局薬剤師も参加する", 15, true], ["痛み日記を在宅チームと共有する", 9, false], ["夜間の相談先を1枚にまとめて渡す", 6, false]];
+      const q0 = { type: k, title: st.title || "（質問文）", board_mode: st.board };
+      const d0 = { question: q0, voters: 24, texts: samples.map(([body, likes, featured], i) => ({ body, likes, featured, created_at: String(i) })) };
+      pv.innerHTML = `<div class="t"><div><h3>${esc(q0.title)}</h3><div class="how">${esc(typeLabel(q0))}</div></div>
+        <div class="n">24<small>人が投稿</small></div></div><div class="b"></div><div class="f">${st.join ? `参加 <b>${esc(ev ? ev.code : "S11")}</b>` : ""}</div>`;
+      const body = pv.querySelector(".b");
+      if (!st.vis) body.innerHTML = '<p class="veil">投稿を受け付けています</p>'; else renderResults(body, d0);
+      return;
+    }
+    let opts = k === "rating" ? Array.from({ length: st.scale }, (_, i) => String(i + 1)) : (filled().length ? filled() : ["選択肢 1", "選択肢 2", "選択肢 3"]);
+    if (k === "choice" && st.allowAdd) opts = opts.concat(["（回答者が追加した例）"]);
+    const pattern = [34, 21, 15, 9, 6, 4, 3, 2, 2, 1];
+    const ratingPattern = st.scale === 5 ? [2, 5, 14, 30, 19] : [1, 1, 2, 3, 6, 9, 14, 17, 10, 7];
+    const counts = k === "rating" ? ratingPattern : opts.map((_, i) => pattern[i] || 1);
+    const voters = (k === "choice" || k === "quiz") && st.multi ? 52 : counts.reduce((a, b) => a + b, 0);
+    const q = {
+      quiz: k === "quiz", reveal: k === "quiz" && st.correct.length > 0,
+      type: k === "choice" || k === "quiz" ? (st.multi ? "multiple" : "single") : k === "wordcloud" || k === "open" ? "text" : k,
+      title: st.title || "（質問文）", display_mode: st.disp, sort_mode: st.sortm, text_view: k === "open" ? "list" : "cloud",
+      rank_count: k === "rank" ? st.rankN : opts.length, min_select: st.min, max_select: st.multi ? st.max : 1
+    };
+    const data = {
+      question: q, voters: k === "wordcloud" ? 12 : k === "open" ? 4 : voters,
+      options: opts.map((label, i) => ({ id: "o" + i, label, sort_order: i, count: counts[i], correct: st.correct.includes(i), user_added: label === "（回答者が追加した例）",
+        first: Math.round(counts[i] / 2), points: counts[i] * (q.rank_count || 1) })),
+      texts: k === "wordcloud" ? SAMPLE_WORDS.map(b => ({ body: b })) : k === "open" ? SAMPLE_TEXTS.map(b => ({ body: b })) : []
+    };
+    const tl = VoteApp.tally(data);
+    pv.innerHTML = `<div class="t"><div><h3>${esc(q.title)}</h3><div class="how">${esc(typeLabel(q))}</div></div>
+      <div class="n"><span class="lbl">${tl.label}</span>${tl.n}<small>${tl.unit}</small></div></div><div class="b"></div>
+      <div class="f">${st.qr ? `<span class="qrmini">${VoteApp.qrSvg(new URL("./?e=" + (ev ? ev.code : "S11"), location.href).toString())}</span>` : ""}${st.join || st.qr ? `参加 <b>${esc(ev ? ev.code : "S11")}</b>` : ""}</div>`;
+    const body = pv.querySelector(".b");
+    if (!st.vis) body.innerHTML = '<p class="veil">回答を受け付けています</p>';
+    else renderResults(body, data, { inline: true, fit: true });
+    if (soft) body.querySelectorAll(".fill").forEach(f => (f.style.transition = "none"));
+  }
+
+  // ---------- 保存 ----------
+  $("edSave").addEventListener("click", async () => {
+    const msg = t => ($("edMsg").textContent = t || "");
+    const k = st.kind;
+    try {
+      const design = { pal: st.pal, bgsel: st.bgsel, ov: st.ov };
+      if (k === "join") { await saveCfg({ e: ev.code, k: ev.projector_key, q: "", view: "join", link: false, join: true, ...design }); return; }
+      const labels = k === "rating" ? Array.from({ length: st.scale }, (_, i) => String(i + 1)) : filled();
+      if (!st.title.trim()) return msg("質問を入力してください。");
+      if ((k === "choice" || k === "rank" || k === "quiz") && labels.length < 2) return msg("選択肢を2つ以上入力してください。");
+      if (labels.length > 10 && k !== "rating") return msg("選択肢は10件までです。");
+      const correctLabels = st.correct.map(i => (st.options[i] || "").trim()).filter(Boolean);
+      if (k === "quiz" && !correctLabels.length) return msg("✓ を押して正解を指定してください。");
+      const type = k === "choice" || k === "quiz" ? (st.multi ? "multiple" : "single") : k === "rank" ? "rank" : k === "rating" ? "rating" : k === "qa" ? "qa" : k === "ideas" ? "ideas" : "text";
+      const row = {
+        type, title: st.title.trim(),
+        min_select: type === "multiple" ? st.min : 1, max_select: type === "multiple" ? st.max : 1,
+        rank_count: type === "rank" ? st.rankN : null,
+        max_text_answers: st.tmax, max_text_length: st.tlen, text_view: k === "open" ? "list" : "cloud",
+        display_mode: "both", sort_mode: k === "rank" ? "desc" : st.sortm, allow_add: k === "choice" && st.allowAdd,
+        results_visible: st.vis, allow_change: st.allowChange, quiz: k === "quiz", board_mode: st.board
+      };
+      $("edSave").disabled = true;
+      let id = st.qid, qkey = st.qkey;
+      if (id) {
+        await must(sb.from("questions").update(row).eq("id", id));
+      } else {
+        const nums = questions.map(q => parseInt(String(q.qkey).replace(/\D/g, ""), 10)).filter(x => !isNaN(x));
+        qkey = "Q" + ((nums.length ? Math.max(...nums) : 0) + 1);
+        const sort = questions.length ? Math.max(...questions.map(q => q.sort_order)) + 1 : 1;
+        id = (await must(sb.from("questions").insert({ ...row, event_id: ev.id, qkey, sort_order: sort }).select("id").single())).id;
+      }
+      if (!["text", "qa", "ideas"].includes(type)) {
+        const old = st.qid ? questions.find(q => q.id === st.qid).options.filter(o => !o.user_added) : [];
+        if (old.map(o => o.label).join("\n") !== labels.join("\n")) {
+          if (old.length === labels.length) {
+            for (let i = 0; i < labels.length; i++) await must(sb.from("options").update({ label: labels[i] }).eq("id", old[i].id));
+          } else {
+            if (old.length && !confirm("選択肢の数が変わるため、この質問の既存の票は消去されます。続けますか？")) { $("edSave").disabled = false; return; }
+            await must(sb.from("options").delete().eq("question_id", id).eq("user_added", false));
+            await must(sb.from("options").insert(labels.map((label, i) => ({ question_id: id, sort_order: i + 1, label }))));
+          }
+        }
+      }
+      if (type === "single" || type === "multiple") {   // 正解の印（クイズ以外はすべて外す）
+        const opts = await must(sb.from("options").select("id,label,sort_order").eq("question_id", id).order("sort_order"));
+        for (const o of opts) await must(sb.from("options").update({ is_correct: k === "quiz" && correctLabels.includes(o.label) }).eq("id", o.id));
+      }
+      await saveCfg({ e: ev.code, k: ev.projector_key, q: qkey, type, view: "result", link: st.link, join: st.join, qr: st.qr, ...design });
+    } catch (err) { msg(errText(err)); }
+    finally { $("edSave").disabled = false; }
+  });
+  async function must(p) { const { data, error } = await p; if (error) throw error; return data; }
+
+  async function saveCfg(c) {
+    c.slideId = await currentSlideId();
+    await store.set(c);
+    cfg = c;
+    showFrame();
+  }
+
+  // ---------- URL貼り付け（ログインしない場合） ----------
+  $("toPaste").addEventListener("click", () => {
+    st = { link: true, theme: "" };
+    document.querySelectorAll("#sPaste .seg").forEach(el => (el.outerHTML = seg(el.dataset.k)));
+    show("sPaste");
+  });
+  $("sPaste").addEventListener("click", e => {
+    const b = e.target.closest(".seg button"); if (!b) return;
+    const sg = b.closest(".seg"); st[sg.dataset.k] = JSON.parse(b.dataset.v); sg.outerHTML = seg(sg.dataset.k);
+  });
+  $("pasteSave").addEventListener("click", async () => {
+    const m = t => { $("pasteMsg").textContent = t; $("pasteMsg").classList.add("err"); };
+    let p; try { p = new URL($("pasteUrl").value.trim()).searchParams; } catch { return m("URLの形式が正しくありません。"); }
+    const c = { e: (p.get("e") || "").toUpperCase(), k: p.get("k") || "", q: (p.get("q") || "").toUpperCase(),
+                view: p.get("view") === "join" ? "join" : p.get("q") ? "result" : "follow", link: st.link, join: p.get("join") !== "0", pal: "", bgsel: "default", ov: "light" };
+    if (!c.e || !c.k) return m("参加コード（e）と鍵（k）を含むURLを貼り付けてください。");
+    try { const r = await rpc("get_results", { p_code: c.e, p_key: c.k, p_qkey: c.view === "result" ? c.q : null });
+          if (c.view === "result" && !r.question) return m(`質問「${c.q}」が見つかりません。`); }
+    catch (err) { return m(errText(err)); }
+    saveCfg(c);
+  });
+
+  // ---------- 挿入後の表示 ----------
+  function frameUrl() {
+    const u = new URL("projector.html", location.href);
+    u.searchParams.set("e", cfg.e); u.searchParams.set("k", cfg.k);
+    if (cfg.view === "result" && cfg.q) u.searchParams.set("q", cfg.q);
+    if (cfg.view === "join") u.searchParams.set("view", "join");
+    if (cfg.view === "qr") u.searchParams.set("view", "qr");
+    if (!cfg.join) u.searchParams.set("join", "0");
+    for (const [k, v] of Object.entries(designParams(cfg))) u.searchParams.set(k, v);
+    return u.toString();
+  }
+  function showFrame() {
+    show(null);
+    const url = frameUrl();
+    if ($("frame").src !== url) $("frame").src = url;
+    document.body.style.background = cfg.bgsel === "transparent" ? "transparent" : "";
+    $("toBoard").classList.toggle("hidden", !(cfg.type === "qa" || cfg.type === "ideas"));
+    $("tag").textContent = cfg.view === "join" ? "参加案内" : cfg.view === "qr" ? "参加用QR" : cfg.view === "follow" ? "表示中の質問に追従" : `${cfg.q}${cfg.link ? "・スライド連動" : ""}`;
+  }
+  $("toEdit").addEventListener("click", async () => {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return show("sConnect");
+    try { await loadEvents(); await loadQuestions(); } catch (err) { return show("sConnect"); }
+    if (cfg.view === "join") return openEditor(newState("join"));
+    const q = questions.find(x => x.qkey === cfg.q);
+    q ? openEditor(stateFrom(q)) : openPick();
+  });
+  // ---------- 投稿を選ぶ ----------
+  async function openBoard() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return show("sConnect");
+    show("sBoard"); await loadBoard();
+  }
+  async function loadBoard() {
+    try {
+      const d = await rpc("get_results", { p_code: cfg.e, p_key: cfg.k, p_qkey: cfg.q });
+      const q = d.question, unit = q.type === "qa" ? "賛同" : "共感";
+      $("boardTitle").textContent = `スライドに出す${q.type === "qa" ? "質問" : "アイデア"}を選ぶ（${q.qkey}）`;
+      $("boardMsg").textContent = q.board_mode === "top" ? "この質問は「賛同の多い順」で自動表示の設定です。選んで出す場合は「設定を変更」で「選んだ投稿だけ」にしてください。" : "押した投稿がスライドに表示されます。もう一度押すと外れます。";
+      const list = d.texts.filter(t => !t.hidden).sort((a, b) => b.likes - a.likes);
+      $("boardList").innerHTML = list.map(t => `<li><button type="button" data-feat="${t.id}" data-v="${t.featured ? 1 : 0}" style="${t.featured ? "border-color:var(--teal);background:var(--teal-pale)" : ""}">
+          <span class="tag">${t.featured ? "スライドに表示中" : "未表示"}</span><span class="tag">${unit} ${t.likes}</span>${t.answered ? '<span class="tag">回答済み</span>' : ""}<br>${esc(t.body)}</button></li>`).join("")
+        || '<li class="msg">まだ投稿はありません。</li>';
+    } catch (err) { $("boardMsg").textContent = errText(err); }
+  }
+  $("toBoard").addEventListener("click", openBoard);
+  $("boardReload").addEventListener("click", loadBoard);
+  $("boardBack").addEventListener("click", () => showFrame());
+  $("boardList").addEventListener("click", async e => {
+    const b = e.target.closest("[data-feat]"); if (!b) return;
+    const { error } = await sb.from("text_answers").update({ featured: b.dataset.v !== "1" }).eq("id", b.dataset.feat);
+    if (error) $("boardMsg").textContent = errText(error); else loadBoard();
+  });
+
+  $("toPick").addEventListener("click", async () => {
+    const { data } = await sb.auth.getSession();
+    data.session ? openPick() : show("sConnect");
+  });
+
+  // ---------- スライド連動 ----------
+  // スライドショー中、いま映っているスライドがこのスライドかを1秒ごとに確認し、来た瞬間に1回だけ質問を切り替える。
+  // スライドを判定できない環境では、このアドインが画面に見えているかで代わりに判定する。
+  let watcher = null, wasCurrent = false;
+  function currentSlideId() {
+    return new Promise(res => {
+      if (!inOffice()) return res(null);
+      try {
+        Office.context.document.getSelectedDataAsync(Office.CoercionType.SlideRange, r =>
+          res(r.status === Office.AsyncResultStatus.Succeeded && r.value && r.value.slides && r.value.slides.length ? r.value.slides[0].id : null));
+      } catch { res(null); }
+    });
+  }
+  async function check() {
+    const id = await currentSlideId();
+    const isCurrent = id !== null && cfg.slideId ? id === cfg.slideId : !document.hidden;
+    if (isCurrent && !wasCurrent) {
+      try { await rpc("activate_question", { p_code: cfg.e, p_key: cfg.k, p_qkey: cfg.q }); } catch (err) { console.warn(errText(err)); }
+    }
+    wasCurrent = isCurrent;
+  }
+  function startWatch() { wasCurrent = false; check(); watcher = setInterval(check, 1000); }
+  function stopWatch() { clearInterval(watcher); watcher = null; wasCurrent = false; }
+})();
+</script>
+</body>
+</html>

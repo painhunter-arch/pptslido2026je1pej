@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PowerPoint アドインのダウンロード（編集者用）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body { background: var(--wash); }
+  header { background: var(--ink); color: #fff; padding: .9rem 1.4rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header h1 { font-size: 1.05rem; margin: 0; }
+  header .who { font-size: .85rem; opacity: .85; display: flex; gap: .8rem; align-items: center; }
+  header .who button { background: none; border: 1px solid rgba(255,255,255,.5); color: #fff; border-radius: 6px; padding: .2rem .7rem; cursor: pointer; }
+  main { max-width: 64rem; margin: 0 auto; padding: 1.6rem 1.2rem 3rem; }
+  .card { background: #fff; border-radius: var(--radius-m); padding: 1.4rem 1.5rem; margin-bottom: 1.2rem; }
+  .card h2 { font-size: 1.1rem; margin: 0 0 .6rem; }
+  .narrow { max-width: 26rem; margin: 6vh auto; }
+  .muted { color: var(--ink-soft); }
+  .os { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.2rem; }
+  .os .card { min-width: 0; }
+  @media (max-width: 760px) { .os { grid-template-columns: 1fr; } }
+  .os .card { margin: 0; border: 2px solid transparent; }
+  .os .card.mine { border-color: var(--teal); }
+  .os h3 { font-size: 1.15rem; margin: 0 0 .2rem; display: flex; align-items: center; gap: .5rem; }
+  .os h3 .tag { font-size: .75rem; background: var(--teal); color: #fff; border-radius: 99px; padding: .05rem .6rem; }
+  ol.steps { padding-left: 1.3em; margin: .8rem 0; }
+  ol.steps li { margin-bottom: .55rem; line-height: 1.6; }
+  code, .cmd { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+  .cmd { display: block; background: var(--ink); color: #e9f1f1; padding: .7rem .8rem; border-radius: 6px; overflow-x: auto; white-space: pre; margin: .4rem 0; }
+  .row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
+  .next { border-left: 4px solid var(--teal); }
+  .sep { display: flex; align-items: center; gap: .8rem; color: var(--ink-soft); font-size: .85rem; margin: 1rem 0; }
+  .sep::before, .sep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>投票システム　PowerPoint アドインのダウンロード（スライド作成者・編集者用）</h1>
+  <div class="who hidden" id="who"><span id="whoMail"></span><button type="button" id="logout">ログアウト</button></div>
+</header>
+<main>
+  <p class="muted" id="loading">確認しています…</p>
+
+  <!-- ログイン・新規登録 -->
+  <section class="card narrow hidden" id="vLogin">
+    <h2>ログイン</h2>
+    <p class="muted" style="font-size:.9rem">スライドを作る方（メイン編集者・共同編集者）用のページです。初めての方は新規登録してください。登録後すぐにダウンロードできます。</p>
+    <form id="loginForm">
+      <label class="field"><span>メールアドレス</span><input type="email" id="email" autocomplete="username" required></label>
+      <label class="field"><span>パスワード（8文字以上）</span><input type="password" id="pw" autocomplete="current-password" required minlength="8"></label>
+      <button class="btn" type="submit" style="width:100%">ログイン</button>
+    </form>
+    <div class="sep">はじめての方</div>
+    <button class="btn ghost" type="button" id="signup" style="width:100%">この内容で新規登録</button>
+    <p class="notice error hidden" id="loginErr" role="alert" style="margin-top:1rem"></p>
+  </section>
+
+  <!-- ダウンロード -->
+  <div class="hidden" id="vDownload">
+    <section class="card">
+      <h2>お使いのパソコンを選んでください</h2>
+      <p class="muted">アドインを入れると、PowerPoint の中から会場アンケートを作り込み、スライドショー中に結果をそのまま映せます。アドインは毎回この投票システム（同じ公開サイト）から最新版を読み込むので、入れ直しは不要です。</p>
+    </section>
+    <div class="os">
+      <section class="card" id="cardWin">
+        <h3>Windows <span class="tag hidden" id="tagWin">お使いのPC</span></h3>
+        <p class="muted" style="margin-top:0">PowerPoint（Microsoft 365／2019 以降）</p>
+        <div class="row">
+          <button class="btn" type="button" id="dlWin">インストーラーをダウンロード</button>
+          <button class="btn ghost small" type="button" id="dlWinUn">アンインストーラー</button>
+        </div>
+        <ol class="steps">
+          <li>PowerPoint をすべて閉じる。</li>
+          <li>ダウンロードした <code>install-vote-addin.cmd</code> をダブルクリックする。<br>
+            <span class="muted" style="font-size:.85rem">「WindowsによってPCが保護されました」と出たら「詳細情報」→「実行」。管理者権限は不要です（自分のユーザーにだけ登録します）。</span></li>
+          <li>「完了しました」と表示されたら閉じる。</li>
+          <li>PowerPoint を開き、「挿入」→「アドイン」→「個人用アドイン」→ 上部の「開発者アドイン」（または「共有フォルダー」）にある「投票結果（自前）」を選んで「追加」。</li>
+        </ol>
+        <details><summary class="muted">うまく表示されないとき（共有フォルダー方式）</summary>
+          <ol class="steps" style="font-size:.9rem">
+            <li>「設定ファイルだけ保存」で <code>vote-addin.xml</code> を保存する。</li>
+            <li>PC内にフォルダ（例 <code>C:\AddinCatalog</code>）を作り、右クリック →「プロパティ」→「共有」で共有。表示されたパス（例 <code>\\PC名\AddinCatalog</code>）を控え、ファイルを入れる。</li>
+            <li>PowerPoint →「ファイル」→「オプション」→「トラスト センター」→「トラスト センターの設定」→「信頼できるアドイン カタログ」に控えたパスを追加し、「メニューに表示する」にチェック → PowerPoint を再起動。</li>
+            <li>「個人用アドイン」→「共有フォルダー」から追加。</li>
+          </ol>
+          <button class="btn ghost small" type="button" id="dlXmlWin">設定ファイルだけ保存</button>
+        </details>
+      </section>
+
+      <section class="card" id="cardMac">
+        <h3>Mac <span class="tag hidden" id="tagMac">お使いのMac</span></h3>
+        <p class="muted" style="margin-top:0">PowerPoint for Mac（Microsoft 365／2019 以降）</p>
+        <div class="row"><button class="btn" type="button" id="dlMac">設定ファイルをダウンロード</button></div>
+        <ol class="steps">
+          <li>PowerPoint を終了する。</li>
+          <li>「アプリケーション」→「ユーティリティ」→「ターミナル」を開き、下の1行をコピーして貼り付け、return キーを押す（ダウンロードした <code>vote-addin.xml</code> を所定の場所にコピーします）。
+            <span class="cmd" id="macCmd"></span>
+            <button class="btn ghost small" type="button" id="copyMac">この1行をコピー</button></li>
+          <li>PowerPoint を開き、「挿入」→「アドイン」→「個人用アドイン」から「投票結果（自前）」を選ぶ。</li>
+        </ol>
+        <details><summary class="muted">ターミナルを使わない方法</summary>
+          <ol class="steps" style="font-size:.9rem">
+            <li>Finder で「移動」→「フォルダへ移動…」（⇧⌘G）を開き、次を貼り付けて移動。<br><code>~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/</code></li>
+            <li><code>wef</code> フォルダがなければ作り、その中に <code>vote-addin.xml</code> を入れる。</li>
+          </ol>
+        </details>
+      </section>
+    </div>
+
+    <section class="card next" style="margin-top:1.2rem">
+      <h2>次にすること</h2>
+      <ol class="steps">
+        <li><b>新しく作る場合</b>：<a href="admin.html">管理画面</a>の「プロジェクトを作成」で作り、メイン編集者になる。共同編集者に伝えるパスワードもここで決める。</li>
+        <li><b>共同編集する場合</b>：メイン編集者から受け取った<b>プロジェクト番号</b>と<b>パスワード</b>で参加する（アドインの中、または管理画面の「番号とパスワードで参加」）。</li>
+        <li>スライドにアドインを挿入し、<a href="https://github.com" id="manualLink">スライド作成者のための説明書</a>に沿って質問を作る。</li>
+      </ol>
+      <p class="muted" style="font-size:.85rem">アドインと管理画面は、同じアカウント・同じプロジェクトにつながっています。どちらで作った質問も、もう一方から見えます。</p>
+    </section>
+  </div>
+</main>
+
+<script src="assets/vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(() => {
+  const { sb, rpc, errText, manifestXml, baseUrl } = window.VoteApp;
+  const $ = id => document.getElementById(id);
+  const views = ["vLogin", "vDownload"];
+  const show = id => { $("loading").classList.add("hidden"); views.forEach(v => $(v).classList.toggle("hidden", v !== id)); };
+
+  // ---------- 状態の確認 ----------
+  async function check() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) { $("who").classList.add("hidden"); return show("vLogin"); }
+    $("whoMail").textContent = data.session.user.email; $("who").classList.remove("hidden");
+    setupDownloads(); show("vDownload");
+  }
+  function loginErr(m) { show("vLogin"); $("loginErr").textContent = m; $("loginErr").classList.toggle("hidden", !m); }
+
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pw").value });
+    if (error) return loginErr(/confirm/i.test(error.message) ? "メールの確認がまだです。届いたメールのリンクを開いてからログインしてください。" : "メールアドレスまたはパスワードが違います。");
+    check();
+  });
+  $("signup").addEventListener("click", async () => {
+    if (!$("loginForm").reportValidity()) return;
+    const { data, error } = await sb.auth.signUp({ email: $("email").value.trim(), password: $("pw").value,
+      options: { emailRedirectTo: location.href.split("?")[0] } });
+    if (error) return loginErr(/not allowed|disabled|signup/i.test(error.message) ? "新規登録は受け付けていません。伊東から届いたアカウント（メールアドレスとパスワード）でログインしてください。" : "登録できませんでした：" + error.message);
+    if (!data.session) return loginErr("確認メールを送りました。メールのリンクを開いてから、このページでログインしてください。");
+    check();
+  });
+  $("logout").addEventListener("click", async () => { await sb.auth.signOut(); check(); });
+
+  // ---------- ダウンロード（許可された人のブラウザの中で作る） ----------
+  function save(name, text, type) {
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  const b64 = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+  const crlf = s => s.replace(/\r?\n/g, "\r\n");
+
+  function winInstaller() {
+    const id = (window.VOTE_CONFIG.ADDIN_ID || "4b52dc98-0b83-40b0-9bd1-2a2d3261a063");
+    return crlf(`@echo off
+chcp 65001 >nul
+rem ============================================================
+rem  投票システム PowerPoint アドイン インストーラー（Windows）
+rem  接続先: ${baseUrl()}
+rem  自分のユーザーにだけ登録します（管理者権限は不要）
+rem ============================================================
+setlocal
+set "DIR=%LOCALAPPDATA%\\SymposiumVote"
+if not exist "%DIR%" mkdir "%DIR%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[IO.File]::WriteAllBytes('%DIR%\\vote-addin.xml',[Convert]::FromBase64String('${b64(manifestXml())}'))"
+if errorlevel 1 goto fail
+reg add "HKCU\\Software\\Microsoft\\Office\\16.0\\WEF\\Developer" /v "${id}" /t REG_SZ /d "%DIR%\\vote-addin.xml" /f >nul
+if errorlevel 1 goto fail
+echo.
+echo 完了しました。PowerPoint を開き、「挿入」→「アドイン」→「個人用アドイン」から「投票結果（自前）」を追加してください。
+echo.
+pause
+exit /b 0
+:fail
+echo.
+echo 登録できませんでした。ページの「うまく表示されないとき（共有フォルダー方式）」をお試しください。
+pause
+exit /b 1
+`);
+  }
+  function winUninstaller() {
+    const id = (window.VOTE_CONFIG.ADDIN_ID || "4b52dc98-0b83-40b0-9bd1-2a2d3261a063");
+    return crlf(`@echo off
+chcp 65001 >nul
+reg delete "HKCU\\Software\\Microsoft\\Office\\16.0\\WEF\\Developer" /v "${id}" /f >nul 2>&1
+del "%LOCALAPPDATA%\\SymposiumVote\\vote-addin.xml" >nul 2>&1
+echo 投票システムのアドインを削除しました。PowerPoint を再起動してください。
+pause
+`);
+  }
+  const macCmd = 'mkdir -p ~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef && cp ~/Downloads/vote-addin.xml ~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef/ && echo "完了しました。PowerPoint を開いてください。"';
+
+  let wired = false;
+  function setupDownloads() {
+    const mac = /Mac/i.test(navigator.platform || navigator.userAgent);
+    $(mac ? "cardMac" : "cardWin").classList.add("mine");
+    $(mac ? "tagMac" : "tagWin").classList.remove("hidden");
+    $("macCmd").textContent = macCmd;
+    $("manualLink").href = baseUrl() + "docs/MANUAL_PPT.md";
+    if (wired) return; wired = true;
+    $("dlWin").addEventListener("click", () => save("install-vote-addin.cmd", winInstaller(), "application/octet-stream"));
+    $("dlWinUn").addEventListener("click", () => save("uninstall-vote-addin.cmd", winUninstaller(), "application/octet-stream"));
+    $("dlXmlWin").addEventListener("click", () => save("vote-addin.xml", manifestXml(), "application/xml"));
+    $("dlMac").addEventListener("click", () => save("vote-addin.xml", manifestXml(), "application/xml"));
+    $("copyMac").addEventListener("click", () => navigator.clipboard.writeText(macCmd).then(() => ($("copyMac").textContent = "コピーしました")));
+  }
+
+  check();
+})();
+</script>
+</body>
+</html>

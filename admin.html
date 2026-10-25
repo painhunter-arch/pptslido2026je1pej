@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>投票 管理画面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body { background: var(--wash); font-size: 15px; }
+  header { background: var(--ink); color: #fff; padding: .7rem 1.2rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 1rem; margin: 0; flex: 1; }
+  header select { min-height: 36px; border-radius: var(--radius-s); border: 0; padding: 0 .5em; max-width: 26rem; color: var(--ink); }
+  header .btn.ghost { color: #fff; border-color: rgba(255,255,255,.5); }
+  main { max-width: 1280px; margin: 0 auto; padding: 1.2rem; }
+  .panel { background: var(--paper); border-radius: var(--radius-m); padding: 1.1rem 1.2rem; margin-bottom: 1.2rem; }
+  .panel h2 { font-size: 1.05rem; margin: 0 0 .8rem; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .login { max-width: 24rem; margin: 10vh auto; }
+
+  .remote { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  .remote .now { flex: 1 1 14rem; font-weight: 700; }
+  .remote .now small { display: block; font-weight: 400; color: var(--ink-soft); }
+
+  table.qs { width: 100%; border-collapse: collapse; }
+  table.qs td { padding: .55rem .4rem; border-top: 1px solid var(--line); vertical-align: top; }
+  table.qs tr.sel td { background: var(--teal-pale); }
+  table.qs tr.live td:first-child { box-shadow: inset 4px 0 0 var(--teal); }
+  .qk { font-weight: 700; white-space: nowrap; }
+  .qt { cursor: pointer; }
+  .qt small { display: block; color: var(--ink-soft); }
+  .tag { display: inline-block; font-size: .78rem; padding: .05em .55em; border-radius: 99px; margin-right: .3em; background: var(--wash); color: var(--ink-soft); }
+  .tag.on { background: var(--teal); color: #fff; }
+  .tag.off { background: #fbeaea; color: var(--alert); }
+  .ops { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
+
+  .preview { min-height: 12rem; --bar-h: 14px; --bar-gap: .8rem; }
+  .preview h3 { margin: 0 0 .2rem; font-size: 1.05rem; }
+  .preview .meta { color: var(--ink-soft); font-size: .9rem; margin-bottom: 1rem; }
+  .mod { list-style: none; padding: 0; margin: 1rem 0 0; max-height: 22rem; overflow: auto; }
+  .mod li { display: flex; justify-content: space-between; gap: .6rem; padding: .45rem 0; border-top: 1px solid var(--line); }
+  .mod li.hid span:first-child { text-decoration: line-through; color: var(--ink-soft); }
+  .mod small { color: var(--ink-soft); margin-left: .4em; }
+  .mod li.feat { background: var(--teal-pale); }
+  .mod li.modhead span { color: var(--ink-soft); font-size: .85rem; }
+  .mod .mbtns { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: flex-end; flex: none; max-width: 60%; }
+
+  .urls { display: grid; gap: .5rem; }
+  .url { display: grid; grid-template-columns: 9.5rem 1fr auto; gap: .5rem; align-items: center; font-size: .88rem; }
+  .url code { background: var(--wash); padding: .35em .5em; border-radius: 4px; overflow-x: auto; white-space: nowrap; font-family: inherit; }
+  @media (max-width: 640px) { .url { grid-template-columns: 1fr auto; } .url span { grid-column: 1 / -1; } }
+  .joinbox { display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap; }
+  .joinbox .qr svg { width: 140px; height: 140px; display: block; }
+
+  dialog { border: 0; border-radius: var(--radius-m); padding: 0; width: min(40rem, 94vw); }
+  dialog::backdrop { background: rgba(23,35,59,.45); }
+  dialog form { padding: 1.3rem; max-height: 88vh; overflow: auto; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 1rem; }
+  @media (max-width: 560px) { .two, .three { grid-template-columns: 1fr; } }
+  .check { display: flex; gap: .5em; align-items: center; margin: 0 0 .7rem; }
+  .check input { width: 1.2rem; height: 1.2rem; }
+  .resets { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .resets h3 { font-size: .95rem; margin: 0 0 .3rem; }
+  .resets p { font-size: .85rem; color: var(--ink-soft); margin: 0 0 .6rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip { display: inline-flex; align-items: center; gap: .4rem; border: 2px solid var(--line); border-radius: 99px; padding: .25rem .7rem .25rem .3rem; background: #fff; cursor: pointer; font-size: .85rem; }
+  .chip i { width: 1.3rem; height: 1.3rem; border-radius: 50%; display: inline-block; }
+  .chip[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+  .bgs { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .bg { width: 112px; aspect-ratio: 16/9; border: 3px solid transparent; border-radius: 6px; background: var(--wash) center/cover; cursor: pointer; position: relative; font-size: .75rem; color: var(--ink-soft); display: grid; place-items: center; }
+  .bg[aria-pressed="true"] { border-color: var(--teal); }
+  .bg .del { position: absolute; right: 2px; top: 2px; border: 0; background: rgba(0,0,0,.55); color: #fff; border-radius: 4px; font-size: .7rem; cursor: pointer; }
+  .seg2 { display: inline-flex; border: 1.5px solid var(--teal); border-radius: 6px; overflow: hidden; }
+  .seg2 button { border: 0; background: #fff; color: var(--teal); padding: .35rem .7rem; font-weight: 700; cursor: pointer; }
+  .seg2 button + button { border-left: 1.5px solid var(--teal); }
+  .seg2 button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+  .toast { position: fixed; right: 1rem; bottom: 1rem; background: var(--ink); color: #fff; padding: .6rem 1rem; border-radius: var(--radius-s); }
+</style>
+</head>
+<body>
+<header class="hidden" id="hdr">
+  <h1>投票 管理画面</h1>
+  <select id="evSel" aria-label="プロジェクトを選ぶ"></select>
+  <button class="btn small ghost" id="joinPj" type="button">番号とパスワードで参加</button>
+  <button class="btn small ghost" id="newEv" type="button">プロジェクトを作成</button>
+  <span id="who" style="font-size:.8rem;opacity:.8"></span>
+  <button class="btn small ghost" id="logout" type="button">ログアウト</button>
+</header>
+
+<!-- ログイン -->
+<section class="panel login hidden" id="vLogin">
+  <h2>ログイン</h2>
+  <form id="loginForm">
+    <label class="field"><span>メールアドレス</span><input type="email" id="email" autocomplete="username" required></label>
+    <label class="field"><span>パスワード（8文字以上）</span><input type="password" id="pw" autocomplete="current-password" required minlength="8"></label>
+    <button class="btn" type="submit" style="width:100%">ログイン</button>
+  </form>
+  <button class="btn ghost" type="button" id="signup" style="width:100%; margin-top:.6rem">この内容でアカウントを新規登録</button>
+  <p style="font-size:.85rem; color:var(--ink-soft)">はじめての方は「新規登録」。新しいプロジェクトを作るとメイン編集者に、受け取った「プロジェクト番号」と「パスワード」で参加すると共同編集者になります。</p>
+  <p class="notice error hidden" id="loginErr" role="alert" style="margin-top:1rem"></p>
+</section>
+
+<!-- 参加しているプロジェクトがないとき -->
+<section class="panel login hidden" id="vNoProject">
+  <h2>プロジェクトに参加する・作成する</h2>
+  <p id="npMsg" style="color:var(--ink-soft)">まだ参加しているプロジェクトがありません。メイン編集者から受け取ったプロジェクト番号とパスワードを入力するか、新しいプロジェクトを作成してください。</p>
+  <form id="joinForm2">
+    <label class="field"><span>プロジェクト番号（例 P-0001）</span><input id="jpNo" required autocapitalize="characters"></label>
+    <label class="field"><span>プロジェクトのパスワード</span><input id="jpPass" required autocomplete="off"></label>
+    <button class="btn" type="submit" style="width:100%">参加する</button>
+  </form>
+  <div id="firstAdmin" class="hidden" style="margin-top:1rem">
+    <p style="color:var(--ink-soft)">全体管理者がまだ登録されていません。このシステムを導入した方は、最初の全体管理者として登録してください。</p>
+    <button class="btn ghost" type="button" id="claimAdmin" style="width:100%">最初の全体管理者として登録</button>
+  </div>
+  <div id="adminCreate" class="hidden" style="margin-top:1rem">
+    <button class="btn ghost" type="button" id="newEv2" style="width:100%">新しいプロジェクトを作成する（メイン編集者になります）</button>
+  </div>
+  <p class="notice error hidden" id="npErr" role="alert" style="margin-top:1rem"></p>
+  <button class="btn small ghost" type="button" id="logout2" style="margin-top:1rem">ログアウト</button>
+</section>
+
+<!-- パスワードの表示（作成・変更のときだけ） -->
+<dialog id="passDlg"><form method="dialog" style="padding:1.3rem">
+  <h2 style="margin-top:0">共同編集者に伝えるプロジェクト番号とパスワード</h2>
+  <p>パスワードは<b>この画面でだけ</b>表示されます。控えてから閉じてください（あとから確認はできません。忘れたら「パスワードを変更」で設定し直します）。</p>
+  <div style="font-size:1.4rem; font-weight:700; background:var(--wash); padding:.8rem 1rem; border-radius:8px">
+    プロジェクト番号：<span id="pdNo"></span><br>パスワード：<span id="pdPass" style="letter-spacing:.05em"></span></div>
+  <p style="font-size:.9rem; color:var(--ink-soft)">伝え方の例：「アドイン配布ページ（URL）でアカウントを登録し、アドインまたは管理画面の『番号とパスワードで参加』から入力してください」</p>
+  <div style="display:flex; gap:.6rem; justify-content:flex-end"><button class="btn ghost" type="button" id="pdCopy">コピー</button><button class="btn" value="ok">控えたので閉じる</button></div>
+</form></dialog>
+
+<main class="hidden" id="vMain">
+  <!-- 進行（リモコン） -->
+  <section class="panel">
+    <div class="remote">
+      <div class="now" id="nowQ"></div>
+      <button class="btn ghost" id="prevQ" type="button">前の質問</button>
+      <button class="btn" id="nextQ" type="button">次の質問を表示</button>
+      <button class="btn ghost" id="stopQ" type="button">表示を止める</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>質問</h2>
+        <table class="qs"><tbody id="qRows"></tbody></table>
+        <div style="margin-top:1rem; display:flex; gap:.5rem; flex-wrap:wrap">
+          <button class="btn small" id="addQ" type="button">質問を追加</button>
+          <button class="btn small ghost" id="csv" type="button">結果をCSVで保存</button>
+        </div>
+        <div class="resets">
+          <h3>リセット</h3>
+          <p>消去したデータは元に戻せません。先に「結果をCSVで保存」しておくと安全です。</p>
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+            <button class="btn small danger" id="resetVotes" type="button">全質問の票を消去</button>
+            <button class="btn small danger" id="resetAll" type="button">参加者も含めて全リセット</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>プロジェクト <span id="pjNo" style="color:var(--teal)"></span></h2>
+        <div id="pjInfo" style="color:var(--ink-soft); font-size:.9rem; margin-bottom:.6rem"></div>
+        <div style="display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem">
+          <button class="btn small ghost" id="rotate" type="button">パスワードを変更</button>
+          <button class="btn small ghost" id="toggleNick" type="button"></button>
+        </div>
+        <h3 style="font-size:.95rem; margin:.4rem 0">編集者（メイン編集者・共同編集者は同じ範囲を編集できます）</h3>
+        <ul class="mod" id="members" style="max-height:none"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>デザイン（このプロジェクトの既定）</h2>
+        <div style="font-size:.9rem; color:var(--ink-soft); margin-bottom:.4rem">配色</div>
+        <div class="chips" id="palChips"></div>
+        <div style="font-size:.9rem; color:var(--ink-soft); margin:.8rem 0 .4rem">背景画像</div>
+        <div class="bgs" id="bgList"></div>
+        <label class="btn small ghost" style="margin-top:.5rem">画像を追加…<input type="file" id="bgFile" accept="image/*" hidden></label>
+        <div style="font-size:.9rem; color:var(--ink-soft); margin:.8rem 0 .4rem">背景の上の文字を読みやすくする</div>
+        <div class="seg2" id="ovSeg"><button data-v="light">白く薄める</button><button data-v="dark">暗く沈める（文字は白）</button><button data-v="none">そのまま</button></div>
+        <p style="font-size:.85rem; color:var(--ink-soft)">スライドごとの配色・背景は、PowerPointのアドインで個別に変えられます。</p>
+      </section>
+
+      <section class="panel">
+        <h2>参加・投影用のURL</h2>
+        <div class="joinbox">
+          <div class="qr" id="joinQr"></div>
+          <div>
+            <div>参加コード <b id="evCode" style="font-size:1.4rem"></b></div>
+            <div id="partCount" style="color:var(--ink-soft)"></div>
+            <div style="margin-top:.5rem; display:flex; gap:.4rem; flex-wrap:wrap">
+              <button class="btn small ghost" id="dlQr" type="button">QRコードを保存（SVG）</button>
+              <button class="btn small ghost" id="toggleOpen" type="button"></button>
+              <a class="btn small ghost" href="install.html" target="_blank">PowerPointアドインの入手</a>
+            </div>
+          </div>
+        </div>
+        <div class="urls" id="urls" style="margin-top:1rem"></div>
+        <p style="font-size:.85rem; color:var(--ink-soft); margin:.8rem 0 0">
+          「スライド連動」URLは、そのスライドが表示された時点でその質問を聴衆の端末に出します。
+          「結果のみ」URLは表示だけで、質問は切り替えません。PowerPointでは、自前アドインの設定欄にこのURLを貼り付けます。投影用URLには鍵が含まれるため、外部に共有しないでください。
+        </p>
+      </section>
+    </div>
+
+    <section class="panel preview">
+      <h3 id="pvTitle">プレビュー</h3>
+      <div class="meta" id="pvMeta"></div>
+      <div id="pvBody"></div>
+      <ul class="mod" id="pvMod"></ul>
+    </section>
+  </div>
+</main>
+
+<!-- 質問の編集 -->
+<dialog id="dlg">
+  <form id="qForm" method="dialog">
+    <h2 id="dlgTitle" style="margin-top:0">質問を編集</h2>
+    <div class="two">
+      <label class="field"><span>短い名前（スライドURL用・例 Q1）</span><input id="f_qkey" required maxlength="12" pattern="[A-Za-z0-9_-]+"></label>
+      <label class="field"><span>表示順</span><input id="f_sort" type="number" value="0"></label>
+    </div>
+    <label class="field"><span>形式</span>
+      <select id="f_type">
+        <option value="single">単一選択（1つ選ぶ）</option>
+        <option value="multiple">複数選択（選べる数を指定）</option>
+        <option value="rank">順位付け（上位いくつかに順位をつける）</option>
+        <option value="text">自由記載（ワードクラウド／一覧）</option>
+        <option value="rating">星で評価（1〜5／1〜10）</option>
+        <option value="qa">会場からの質問（Q&amp;A）</option>
+        <option value="ideas">アイデア募集</option>
+      </select></label>
+    <label class="field"><span>質問文</span><textarea id="f_title" rows="2" required></textarea></label>
+    <label class="field"><span>補足（任意）</span><input id="f_desc"></label>
+
+    <div id="g_rating">
+      <label class="field"><span>段階</span><select id="f_scale"><option value="5">5段階</option><option value="10">10段階</option></select></label>
+    </div>
+    <div id="g_choice">
+      <label class="field"><span>選択肢（1行に1つ・10件まで）</span><textarea id="f_opts" rows="6"></textarea></label>
+      <div class="two" id="g_quiz">
+        <label class="check" style="margin-top:.4rem"><input type="checkbox" id="f_quiz"> クイズにする（正解を設定）</label>
+        <label class="field"><span>正解の番号（例 2、複数は 1,3）</span><input id="f_correct" inputmode="numeric"></label>
+      </div>
+      <label class="check" id="g_add"><input type="checkbox" id="f_add"> 回答者が自分で選択肢を追加できる（数の上限なし）</label>
+      <div class="three" id="g_multi">
+        <label class="field"><span>最少選択数</span><input id="f_min" type="number" min="1" value="1"></label>
+        <label class="field"><span>最大選択数（10まで）</span><input id="f_max" type="number" min="1" max="10" value="2"></label>
+      </div>
+      <div class="three" id="g_rank">
+        <label class="field"><span>順位をつける数（空欄＝全部）</span><input id="f_rank" type="number" min="1"></label>
+      </div>
+      <div class="two">
+        <label class="field"><span>数値の表示</span>
+          <select id="f_disp" disabled><option value="both">全投票数に対する％と件数（固定）</option></select></label>
+        <label class="field"><span>並び順</span>
+          <select id="f_sortm"><option value="original">選択肢の順</option><option value="desc">票の多い順（ランキング）</option></select></label>
+      </div>
+    </div>
+
+    <div id="g_text">
+      <div class="three">
+        <label class="field"><span>1人あたり投稿数</span><input id="f_tmax" type="number" min="1" max="20" value="3"></label>
+        <label class="field"><span>文字数上限</span><input id="f_tlen" type="number" min="5" max="200" value="30"></label>
+        <label class="field" id="g_tview"><span>表示</span>
+          <select id="f_tview"><option value="cloud">ワードクラウド</option><option value="list">一覧</option></select></label>
+        <label class="field" id="g_board"><span>スライドへの出し方</span>
+          <select id="f_board"><option value="pick">選んだ投稿だけ</option><option value="top">賛同の多い順（上位5件）</option></select></label>
+      </div>
+    </div>
+
+    <label class="check"><input type="checkbox" id="f_change" checked> 投票後の変更を許可する</label>
+    <label class="check"><input type="checkbox" id="f_open" checked> 投票を受け付ける</label>
+    <label class="check"><input type="checkbox" id="f_vis" checked> 投影画面に結果を表示する</label>
+    <p class="notice error hidden" id="qErr"></p>
+    <div style="display:flex; gap:.6rem; justify-content:flex-end; margin-top:1rem">
+      <button class="btn danger" id="delQ" type="button" style="margin-right:auto">この質問を削除</button>
+      <button class="btn ghost" value="cancel" formnovalidate>閉じる</button>
+      <button class="btn" id="saveQ" value="save">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(() => {
+  const { sb, rpc, errText, esc, renderResults, typeLabel, baseUrl } = window.VoteApp;
+  const $ = id => document.getElementById(id);
+  let events = [], ev = null, qs = [], previewKey = null, timer = null, editing = null;
+
+  function toast(msg) {
+    $("toast").textContent = msg; $("toast").classList.remove("hidden");
+    clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").classList.add("hidden"), 2200);
+  }
+  async function q(promise) { const { data, error } = await promise; if (error) throw error; return data; }
+  function fail(err) { toast(errText(err)); console.error(err); }
+
+  // ---------- ログイン・アカウント ----------
+  let me = null;   // my_projects の結果
+  async function boot() {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return showLogin();
+    $("who").textContent = data.session.user.email || "";
+    me = await rpc("my_projects");
+    $("newEv").classList.remove("hidden");
+    if (!me.projects.length) return showNoProject();
+    $("vLogin").classList.add("hidden"); $("vNoProject").classList.add("hidden");
+    $("hdr").classList.remove("hidden"); $("vMain").classList.remove("hidden");
+    await loadEvents();
+  }
+  function showLogin(msg) {
+    ["hdr", "vMain", "vNoProject"].forEach(id => $(id).classList.add("hidden")); $("vLogin").classList.remove("hidden");
+    $("loginErr").textContent = msg || ""; $("loginErr").classList.toggle("hidden", !msg);
+  }
+  function showNoProject() {
+    ["hdr", "vMain", "vLogin"].forEach(id => $(id).classList.add("hidden")); $("vNoProject").classList.remove("hidden");
+    $("firstAdmin").classList.toggle("hidden", me.admins_exist);
+    $("adminCreate").classList.remove("hidden");
+  }
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pw").value });
+    if (error) return showLogin(/confirm/i.test(error.message) ? "メールの確認がまだです。届いたメールのリンクを開いてからログインしてください。" : "メールアドレスまたはパスワードが違います。");
+    boot();
+  });
+  $("signup").addEventListener("click", async () => {
+    if (!$("loginForm").reportValidity()) return;
+    const { data, error } = await sb.auth.signUp({ email: $("email").value.trim(), password: $("pw").value,
+      options: { emailRedirectTo: location.href.split("?")[0] } });
+    if (error) return showLogin(/not allowed|disabled|signup/i.test(error.message) ? "新規登録は受け付けていません。伊東から届いたアカウント（メールアドレスとパスワード）でログインしてください。" : "登録できませんでした：" + error.message);
+    if (!data.session) return showLogin("確認メールを送りました。メールのリンクを開いてから、ここでログインしてください。");
+    boot();
+  });
+  const logout = async () => { clearTimeout(timer); await sb.auth.signOut(); showLogin(); };
+  $("logout").addEventListener("click", logout); $("logout2").addEventListener("click", logout);
+  $("claimAdmin").addEventListener("click", async () => {
+    try { await rpc("claim_first_admin"); toast("全体管理者として登録しました"); boot(); } catch (err) { $("npErr").textContent = errText(err); $("npErr").classList.remove("hidden"); }
+  });
+
+  // ---------- 番号とパスワードで参加 ----------
+  async function joinProject(no, pass, errEl) {
+    try {
+      const r = await rpc("join_project", { p_project_no: no.trim(), p_passphrase: pass.trim() });
+      if (!r.ok) throw { message: r.error };
+      toast(`「${r.title}」に参加しました`); localStorage.setItem("vote-admin-ev", r.id); boot();
+    } catch (err) { if (errEl) { errEl.textContent = errText(err); errEl.classList.remove("hidden"); } else toast(errText(err)); }
+  }
+  $("joinForm2").addEventListener("submit", e => { e.preventDefault(); joinProject($("jpNo").value, $("jpPass").value, $("npErr")); });
+  $("joinPj").addEventListener("click", () => {
+    const no = prompt("プロジェクト番号（例 P-0001）"); if (!no) return;
+    const pass = prompt("プロジェクトのパスワード"); if (!pass) return;
+    joinProject(no, pass);
+  });
+
+  // ---------- プロジェクト ----------
+  async function loadEvents(selectId) {
+    events = await q(sb.from("events").select("*").order("created_at"));
+    $("evSel").innerHTML = events.map(e => `<option value="${e.id}">${esc(e.project_no || "")}　${esc(e.code)}　${esc(e.title)}</option>`).join("");
+    const keep = selectId || localStorage.getItem("vote-admin-ev");
+    if (keep && events.some(e => e.id === keep)) $("evSel").value = keep;
+    if (events.length) selectEvent($("evSel").value);
+  }
+  $("evSel").addEventListener("change", () => selectEvent($("evSel").value));
+  async function createProject() {
+    const title = (prompt("プロジェクト名（例：第36回日本医療薬学会 シンポジウム11）") || "").trim(); if (!title) return;
+    const code = (prompt("聴衆の参加コード（英数字2〜16文字。例 S11）") || "").trim().toUpperCase(); if (!code) return;
+    const pass = prompt("共同編集者に伝えるプロジェクトのパスワード（8文字以上）\n空欄のままにすると、自動で作ります。", "");
+    if (pass === null) return;
+    try { const r = await rpc("create_project", { p_title: title, p_code: code, p_pass: pass }); showPass(r.project_no, r.passphrase); localStorage.setItem("vote-admin-ev", r.id); boot(); }
+    catch (err) { fail(err); }
+  }
+  $("newEv").addEventListener("click", createProject); $("newEv2").addEventListener("click", createProject);
+  function showPass(no, pass) {
+    $("pdNo").textContent = no; $("pdPass").textContent = pass; $("passDlg").showModal();
+  }
+  $("pdCopy").addEventListener("click", () => navigator.clipboard.writeText(`プロジェクト番号：${$("pdNo").textContent}\nパスワード：${$("pdPass").textContent}`).then(() => toast("コピーしました")));
+  $("rotate").addEventListener("click", async () => {
+    const np = prompt("新しいプロジェクトのパスワード（8文字以上）\n空欄なら自動で作ります。古いパスワードでは新しく参加できなくなります（参加済みの人はそのまま）。", "");
+    if (np === null) return;
+    try { const r = await rpc("rotate_passphrase", { p_event_id: ev.id, p_new: np }); showPass(ev.project_no, r.passphrase); } catch (err) { fail(err); }
+  });
+  $("toggleNick").addEventListener("click", async () => {
+    try { await q(sb.from("events").update({ require_nickname: !ev.require_nickname }).eq("id", ev.id)); refresh(); } catch (err) { fail(err); }
+  });
+
+  async function renderProject() {
+    const mine = (me.projects.find(p => p.id === ev.id) || {}).role || "editor";
+    const owner = mine === "owner" || me.is_admin;
+    $("pjNo").textContent = ev.project_no || "";
+    $("pjInfo").textContent = `参加コード ${ev.code}　あなたの役割：${mine === "owner" ? "メイン編集者" : mine === "admin" ? "全体管理者" : "共同編集者"}`;
+    $("rotate").classList.toggle("hidden", !owner);
+    $("toggleNick").textContent = ev.require_nickname ? "参加時のニックネーム：必須（変更）" : "参加時のニックネーム：任意（変更）";
+    const ms = await q(sb.from("project_members").select("*").eq("event_id", ev.id).order("joined_at"));
+    $("members").innerHTML = ms.map(m => `<li><span>${esc(m.email || m.user_id)}<small>${m.role === "owner" ? "メイン編集者" : "共同編集者"}</small></span>
+      ${owner ? `<span class="mbtns"><button class="btn small ghost" data-mrole="${m.user_id}" data-v="${m.role === "owner" ? "editor" : "owner"}">${m.role === "owner" ? "共同編集者にする" : "メイン編集者にする"}</button>
+      <button class="btn small danger" data-mrole="${m.user_id}" data-v="remove">外す</button></span>` : ""}</li>`).join("") || "<li><span>まだいません</span></li>";
+    renderTheme();
+  }
+  $("members").addEventListener("click", async e => {
+    const b = e.target.closest("[data-mrole]"); if (!b) return;
+    if (b.dataset.v === "remove" && !confirm("このメンバーをプロジェクトから外しますか？")) return;
+    try { await rpc("set_member", { p_event_id: ev.id, p_user_id: b.dataset.mrole, p_role: b.dataset.v }); renderProject(); } catch (err) { fail(err); }
+  });
+
+  // ---------- デザイン（配色・背景画像） ----------
+  let bgCache = null;
+  async function renderTheme() {
+    const th = ev.theme || {};
+    $("palChips").innerHTML = Object.entries(VoteApp.PALETTES).map(([k, p]) =>
+      `<button type="button" class="chip" data-pal="${k}" aria-pressed="${(th.palette || "teal") === k}"><i style="background:${p.main}"></i>${p.name}</button>`).join("");
+    if (!bgCache) bgCache = await q(sb.from("backgrounds").select("id,name,data").eq("event_id", ev.id).order("created_at"));
+    $("bgList").innerHTML = `<div class="bg" data-bg="" aria-pressed="${!th.bg}">背景なし</div>` +
+      bgCache.map(b => `<div class="bg" data-bg="${b.id}" aria-pressed="${th.bg === b.id}" style="background-image:url('${b.data}')" title="${esc(b.name || "")}">
+        <button class="del" data-delbg="${b.id}" type="button">削除</button></div>`).join("");
+    $("ovSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", (th.overlay || "light") === x.dataset.v));
+    VoteApp.applyPalette(document.documentElement, th.palette);
+  }
+  async function saveTheme(patch) {
+    const theme = { ...(ev.theme || {}), ...patch };
+    await q(sb.from("events").update({ theme }).eq("id", ev.id)); ev.theme = theme; renderTheme();
+  }
+  $("palChips").addEventListener("click", e => { const b = e.target.closest("[data-pal]"); if (b) saveTheme({ palette: b.dataset.pal }).catch(fail); });
+  $("ovSeg").addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (b) saveTheme({ overlay: b.dataset.v }).catch(fail); });
+  $("bgList").addEventListener("click", async e => {
+    const d = e.target.closest("[data-delbg]");
+    if (d) { e.stopPropagation(); if (!confirm("この背景画像を削除しますか？")) return;
+      try { await q(sb.from("backgrounds").delete().eq("id", d.dataset.delbg)); bgCache = null;
+            if ((ev.theme || {}).bg === d.dataset.delbg) await saveTheme({ bg: "" }); else renderTheme(); } catch (err) { fail(err); } return; }
+    const b = e.target.closest("[data-bg]"); if (b) saveTheme({ bg: b.dataset.bg }).catch(fail);
+  });
+  $("bgFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const data = await VoteApp.compressImage(f);
+      const r = await q(sb.from("backgrounds").insert({ event_id: ev.id, name: f.name, data }).select("id").single());
+      bgCache = null; await saveTheme({ bg: r.id }); toast("背景画像を追加しました");
+    } catch (err) { fail(err); } finally { e.target.value = ""; }
+  });
+
+  async function selectEvent(id) {
+    ev = events.find(e => e.id === id); if (!ev) return;
+    localStorage.setItem("vote-admin-ev", id);
+    previewKey = null; bgCache = null;
+    renderJoin(); renderProject().catch(fail);
+    await refresh();
+  }
+
+  async function refresh() {
+    clearTimeout(timer);
+    try {
+      ev = await q(sb.from("events").select("*").eq("id", ev.id).single());
+      qs = await q(sb.from("questions").select("*, options(id,label,sort_order,is_correct,user_added)").eq("event_id", ev.id).order("sort_order").order("created_at"));
+      qs.forEach(x => x.options.sort((a, b) => a.sort_order - b.sort_order));
+      renderRows(); renderUrls(); renderRemote();
+      await renderPreview();
+    } catch (err) { fail(err); }
+    timer = setTimeout(refresh, 2000);
+  }
+
+  // ---------- 一覧 ----------
+  function renderRows() {
+    $("qRows").innerHTML = qs.map(x => {
+      const live = ev.active_question_id === x.id;
+      const sel = (previewKey || activeQ()?.qkey) === x.qkey;
+      return `<tr class="${live ? "live" : ""} ${sel ? "sel" : ""}" data-id="${x.id}">
+        <td class="qk">${esc(x.qkey)}</td>
+        <td class="qt" data-act="pv">${esc(x.title)}<small>
+          ${live ? '<span class="tag on">表示中</span>' : ""}
+          <span class="tag">${esc(typeLabel({ ...x, rank_count: x.rank_count || x.options.length }))}</span>
+          ${x.quiz ? '<span class="tag">クイズ</span>' : ""}
+          ${x.voting_open ? "" : '<span class="tag off">締切</span>'}
+          ${x.results_visible ? "" : '<span class="tag off">結果非表示</span>'}</small></td>
+        <td><div class="ops">
+          <button class="btn small${live ? " ghost" : ""}" data-act="show">${live ? "表示中" : "表示"}</button>
+          <button class="btn small ghost" data-act="open">${x.voting_open ? "締め切る" : "再開"}</button>
+          <button class="btn small ghost" data-act="vis">${x.results_visible ? "結果を隠す" : "結果を出す"}</button>
+          ${x.quiz ? `<button class="btn small${x.reveal ? " ghost" : ""}" data-act="reveal">${x.reveal ? "正解を隠す" : "正解を出す"}</button>` : ""}
+          <button class="btn small ghost" data-act="edit">編集</button>
+          <button class="btn small danger" data-act="reset">票を消去</button>
+        </div></td></tr>`;
+    }).join("") || '<tr><td>質問がありません。「質問を追加」から作成してください。</td></tr>';
+  }
+  const activeQ = () => qs.find(x => x.id === ev.active_question_id);
+
+  $("qRows").addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const row = b.closest("tr"); const x = qs.find(y => y.id === row.dataset.id); if (!x) return;
+    try {
+      switch (b.dataset.act) {
+        case "pv":   previewKey = x.qkey; renderRows(); await renderPreview(); return;
+        case "show": await setActive(x.id); break;
+        case "open": await q(sb.from("questions").update({ voting_open: !x.voting_open }).eq("id", x.id)); break;
+        case "vis":  await q(sb.from("questions").update({ results_visible: !x.results_visible }).eq("id", x.id)); break;
+        case "reveal":
+          // 正解を出すときは投票を締め切る（正解を見てから投票し直すのを防ぐ）
+          await q(sb.from("questions").update(x.reveal ? { reveal: false } : { reveal: true, voting_open: false }).eq("id", x.id)); break;
+        case "edit": openEditor(x); return;
+        case "reset":
+          if (!confirm(`「${x.qkey}」の投票・回答をすべて消去します。元に戻せません。`)) return;
+          { const r = await rpc("reset_question_votes", { p_qid: x.id });
+            toast(`消去しました（票 ${r.votes}件・自由記載 ${r.texts}件）`); }
+          break;
+      }
+      refresh();
+    } catch (err) { fail(err); }
+  });
+
+  // ---------- 進行 ----------
+  async function setActive(id) {
+    await q(sb.from("events").update({ active_question_id: id }).eq("id", ev.id));
+    previewKey = null;
+  }
+  function renderRemote() {
+    const a = activeQ();
+    $("nowQ").innerHTML = a ? `${esc(a.qkey)}　${esc(a.title)}<small>聴衆の端末に表示中</small>`
+                            : `表示中の質問はありません<small>聴衆は待機画面です</small>`;
+    const i = a ? qs.indexOf(a) : -1;
+    $("prevQ").disabled = i <= 0;
+    $("nextQ").disabled = i >= qs.length - 1;
+    $("stopQ").disabled = !a;
+  }
+  $("nextQ").addEventListener("click", async () => { const i = qs.indexOf(activeQ()); if (qs[i + 1]) { await setActive(qs[i + 1].id).catch(fail); refresh(); } });
+  $("prevQ").addEventListener("click", async () => { const i = qs.indexOf(activeQ()); if (i > 0) { await setActive(qs[i - 1].id).catch(fail); refresh(); } });
+  $("stopQ").addEventListener("click", async () => { await setActive(null).catch(fail); refresh(); });
+
+  // ---------- プレビュー ----------
+  async function renderPreview() {
+    const key = previewKey || activeQ()?.qkey || qs[0]?.qkey;
+    if (!key) { $("pvTitle").textContent = "プレビュー"; $("pvMeta").textContent = ""; $("pvBody").innerHTML = ""; $("pvMod").innerHTML = ""; return; }
+    const data = await rpc("get_results", { p_code: ev.code, p_key: ev.projector_key, p_qkey: key });
+    $("partCount").textContent = `参加 ${data.participants}人`;
+    const x = data.question;
+    $("pvTitle").textContent = `${x.qkey}　${x.title}`;
+    const tl = VoteApp.tally(data);
+    $("pvMeta").textContent = `${typeLabel(x)}　${tl.label} ${tl.n}${tl.unit}` + (tl.sub ? `・${tl.sub}` : "") + (["single", "multiple", "rating"].includes(x.type) ? "（％は全投票数に対する割合）" : "") +
+      (x.type === "rank" ? `（得点＝1位${x.rank_count}点〜${x.rank_count}位1点）` : "");
+    renderResults($("pvBody"), data);
+    if (x.type === "qa" || x.type === "ideas") {
+      const unit = x.type === "qa" ? "賛同" : "共感";
+      const list = data.texts.slice().sort((a, b) => b.likes - a.likes || String(a.created_at).localeCompare(String(b.created_at)));
+      $("pvMod").innerHTML = (list.length ? `<li class="modhead"><span>${x.board_mode === "top" ? "スライドには賛同の多い上位5件が出ます" : "「スライドに出す」を押した投稿だけがスライドに出ます"}</span></li>` : "") +
+        list.map(t => `<li class="${t.hidden ? "hid" : ""}${t.featured ? " feat" : ""}">
+          <span>${esc(t.body)}<small>${esc(t.nickname || "匿名")}・${unit} ${t.likes}${t.answered ? "・回答済み" : ""}</small></span>
+          <span class="mbtns">
+            <button class="btn small${t.featured ? "" : " ghost"}" data-feat="${t.id}" data-v="${t.featured ? 1 : 0}" ${t.hidden ? "disabled" : ""}>${t.featured ? "スライドから外す" : "スライドに出す"}</button>
+            <button class="btn small ghost" data-ans="${t.id}" data-v="${t.answered ? 1 : 0}">${t.answered ? "未回答に戻す" : "回答済み"}</button>
+            <button class="btn small ghost" data-tid="${t.id}" data-h="${t.hidden ? 1 : 0}">${t.hidden ? "再表示" : "非表示"}</button></span></li>`).join("")
+        || '<li><span>まだ投稿はありません。</span></li>';
+    } else if (x.type === "text") {
+      $("pvMod").innerHTML = data.texts.map(t => `<li class="${t.hidden ? "hid" : ""}">
+          <span>${esc(t.body)}<small>${esc(t.nickname || "匿名")}</small></span>
+          <button class="btn small ghost" data-tid="${t.id}" data-h="${t.hidden ? 1 : 0}">${t.hidden ? "再表示" : "非表示"}</button></li>`).join("");
+    } else $("pvMod").innerHTML = "";
+  }
+  $("pvMod").addEventListener("click", async e => {
+    const b = e.target.closest("[data-tid],[data-feat],[data-ans]"); if (!b) return;
+    try {
+      if (b.dataset.tid) await q(sb.from("text_answers").update(b.dataset.h !== "1" ? { hidden: true, featured: false } : { hidden: false }).eq("id", b.dataset.tid));
+      if (b.dataset.feat) await q(sb.from("text_answers").update({ featured: b.dataset.v !== "1" }).eq("id", b.dataset.feat));
+      if (b.dataset.ans) await q(sb.from("text_answers").update({ answered: b.dataset.v !== "1" }).eq("id", b.dataset.ans));
+      renderPreview();
+    } catch (err) { fail(err); }
+  });
+
+  // ---------- URL・QR ----------
+  const joinUrl = () => baseUrl() + "?e=" + encodeURIComponent(ev.code);
+  const projUrl = (qk, act) => baseUrl() + "projector.html?e=" + encodeURIComponent(ev.code) + "&k=" + ev.projector_key +
+    (qk ? "&q=" + encodeURIComponent(qk) + (act ? "&activate=1" : "") : "");
+  function qrSvg(t) { const r = qrcode(0, "M"); r.addData(t); r.make(); return r.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); }
+  function renderJoin() {
+    $("evCode").textContent = ev.code;
+    $("joinQr").innerHTML = qrSvg(joinUrl());
+  }
+  $("dlQr").addEventListener("click", () => {
+    const blob = new Blob([qrSvg(joinUrl())], { type: "image/svg+xml" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `join-${ev.code}.svg` });
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("toggleOpen").addEventListener("click", async () => {
+    try { await q(sb.from("events").update({ is_open: !ev.is_open }).eq("id", ev.id)); refresh(); } catch (err) { fail(err); }
+  });
+
+  let lastUrlsSig = "";
+  function renderUrls() {
+    $("toggleOpen").textContent = ev.is_open ? "参加受付を止める" : "参加受付を再開";
+    const sig = ev.id + qs.map(x => x.qkey).join(",");
+    if (sig === lastUrlsSig) return; lastUrlsSig = sig;
+    const rows = [["参加者用", joinUrl()], ["投影：表示中に追従", projUrl()]];
+    rows.push(["投影：参加案内（QR）", baseUrl() + "projector.html?e=" + encodeURIComponent(ev.code) + "&k=" + ev.projector_key + "&view=join"]);
+    qs.forEach(x => { rows.push([`${x.qkey} スライド連動`, projUrl(x.qkey, true)]); rows.push([`${x.qkey} 連動＋QR表示`, projUrl(x.qkey, true) + "&qr=1"]); rows.push([`${x.qkey} 結果のみ`, projUrl(x.qkey, false)]); });
+    $("urls").innerHTML = rows.map(([l, u]) => `<div class="url"><span>${esc(l)}</span><code>${esc(u)}</code>
+      <button class="btn small ghost" data-copy="${esc(u)}">コピー</button></div>`).join("");
+  }
+  $("urls").addEventListener("click", async e => {
+    const b = e.target.closest("[data-copy]"); if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("コピーしました"); }
+    catch { prompt("コピーしてください", b.dataset.copy); }
+  });
+
+  // ---------- CSV ----------
+  $("csv").addEventListener("click", async () => {
+    try {
+      const lines = [["質問", "質問文", "形式", "回答者数", "全投票数", "選択肢／回答", "回答者が追加", "票数", "割合(%・全投票数に対する)", "1位の数", "得点"]];
+      for (const x of qs) {
+        const d = await rpc("get_results", { p_code: ev.code, p_key: ev.projector_key, p_qkey: x.qkey });
+        const total = d.options.reduce((t, o) => t + o.count, 0);
+        if (["text", "qa", "ideas"].includes(x.type)) d.texts.forEach(t => lines.push([x.qkey, x.title, typeLabel(d.question), d.voters, "", t.body + (t.hidden ? "（非表示）" : ""), "", t.likes ?? "", "", "", ""]));
+        else d.options.forEach(o => lines.push([x.qkey, x.title, typeLabel(d.question), d.voters, total, o.label, o.user_added ? "○" : "", o.count,
+          total ? (100 * o.count / total).toFixed(1) : "0.0", x.type === "rank" ? o.first : "", x.type === "rank" ? o.points : ""]));
+      }
+      const csv = "\ufeff" + lines.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })), download: `results-${ev.code}.csv` });
+      a.click(); URL.revokeObjectURL(a.href);
+    } catch (err) { fail(err); }
+  });
+
+  // ---------- 質問の編集 ----------
+  function toggleGroups() {
+    const t = $("f_type").value;
+    $("g_choice").classList.toggle("hidden", t === "text" || t === "rating" || t === "qa" || t === "ideas");
+    $("g_rating").classList.toggle("hidden", t !== "rating");
+    const board = t === "qa" || t === "ideas";
+    $("g_text").classList.toggle("hidden", t !== "text" && !board);
+    $("g_tview").classList.toggle("hidden", board);
+    $("g_board").classList.toggle("hidden", !board);
+    $("g_multi").classList.toggle("hidden", t !== "multiple");
+    $("g_rank").classList.toggle("hidden", t !== "rank");
+    $("g_quiz").classList.toggle("hidden", t !== "single" && t !== "multiple");
+    $("g_add").classList.toggle("hidden", t !== "single" && t !== "multiple");
+  }
+  $("f_type").addEventListener("change", toggleGroups);
+  $("addQ").addEventListener("click", () => openEditor(null));
+
+  function openEditor(x) {
+    editing = x;
+    $("dlgTitle").textContent = x ? "質問を編集" : "質問を追加";
+    $("f_qkey").value = x ? x.qkey : "Q" + (qs.length + 1);
+    $("f_sort").value = x ? x.sort_order : (qs.length ? Math.max(...qs.map(y => y.sort_order)) + 1 : 1);
+    $("f_type").value = x ? x.type : "single";
+    $("f_title").value = x ? x.title : "";
+    $("f_desc").value = x?.description || "";
+    $("f_opts").value = x ? x.options.filter(o => !o.user_added).map(o => o.label).join("\n") : "";
+    $("f_min").value = x ? x.min_select : 1;
+    $("f_max").value = x ? x.max_select : 2;
+    $("f_rank").value = x?.rank_count || "";
+    $("f_quiz").checked = !!x?.quiz;
+    $("f_add").checked = !!x?.allow_add;
+    $("f_correct").value = x ? x.options.map((o, i) => o.is_correct ? i + 1 : null).filter(Boolean).join(",") : "";
+    $("f_scale").value = x && x.type === "rating" && x.options.length === 10 ? "10" : "5";
+    $("f_disp").value = x ? x.display_mode : "both";
+    $("f_sortm").value = x ? x.sort_mode : "original";
+    $("f_tmax").value = x ? x.max_text_answers : 3;
+    $("f_tlen").value = x ? x.max_text_length : 30;
+    $("f_tview").value = x ? x.text_view : "cloud";
+    $("f_board").value = x ? x.board_mode : "pick";
+    $("f_change").checked = x ? x.allow_change : true;
+    $("f_open").checked = x ? x.voting_open : true;
+    $("f_vis").checked = x ? x.results_visible : true;
+    $("qErr").classList.add("hidden");
+    $("delQ").classList.toggle("hidden", !x);
+    toggleGroups();
+    $("dlg").showModal();
+  }
+
+  $("saveQ").addEventListener("click", async e => {
+    e.preventDefault();
+    if (!$("qForm").reportValidity()) return;
+    const type = $("f_type").value;
+    const labels = type === "rating"
+      ? Array.from({ length: +$("f_scale").value }, (_, i) => String(i + 1))
+      : $("f_opts").value.split("\n").map(s => s.trim()).filter(Boolean);
+    const err = m => { $("qErr").textContent = m; $("qErr").classList.remove("hidden"); };
+    const freeText = type === "text" || type === "qa" || type === "ideas";
+    if (!freeText && labels.length < 2) return err("選択肢を2つ以上入力してください。");
+    const row = {
+      event_id: ev.id, qkey: $("f_qkey").value.trim().toUpperCase(), sort_order: +$("f_sort").value || 0, type,
+      title: $("f_title").value.trim(), description: $("f_desc").value.trim() || null,
+      min_select: type === "multiple" ? Math.max(1, +$("f_min").value || 1) : 1,
+      max_select: type === "multiple" ? Math.max(1, +$("f_max").value || 1) : 1,
+      rank_count: type === "rank" && $("f_rank").value ? +$("f_rank").value : null,
+      max_text_answers: +$("f_tmax").value || 3, max_text_length: +$("f_tlen").value || 30,
+      display_mode: "both", sort_mode: $("f_sortm").value, text_view: $("f_tview").value, board_mode: $("f_board").value,
+      allow_change: $("f_change").checked, voting_open: $("f_open").checked, results_visible: $("f_vis").checked,
+      quiz: (type === "single" || type === "multiple") && $("f_quiz").checked,
+      allow_add: (type === "single" || type === "multiple") && !$("f_quiz").checked && $("f_add").checked
+    };
+    if (!freeText && type !== "rating" && labels.length > 10) return err("選択肢は10件までです。");
+    if (row.max_select > 10) return err("複数選択の上限は10件までです。");
+    const correct = row.quiz ? $("f_correct").value.split(/[,、\s]+/).map(Number).filter(n => n >= 1 && n <= labels.length) : [];
+    if (row.quiz && !correct.length) return err("正解の番号を入力してください。");
+    if (row.quiz && type === "single" && correct.length > 1) return err("単一選択のクイズでは、正解は1つにしてください。");
+    if (row.max_select < row.min_select) return err("最大選択数は最少選択数以上にしてください。");
+    if (type === "multiple" && !row.allow_add && row.max_select > labels.length) return err("最大選択数が選択肢の数を超えています。");
+    if (type === "rank" && row.rank_count && row.rank_count > labels.length) return err("順位をつける数が選択肢の数を超えています。");
+    try {
+      let id = editing?.id;
+      if (id) await q(sb.from("questions").update(row).eq("id", id));
+      else id = (await q(sb.from("questions").insert(row).select("id").single())).id;
+      if (!freeText) {
+        const oldOpts = editing ? editing.options.filter(o => !o.user_added) : [];
+        const old = oldOpts.map(o => o.label);
+        if (old.join("\n") !== labels.join("\n")) {
+          const same = old.length === labels.length;
+          if (editing && same) {
+            // 件数が同じなら文言の修正とみなし、票を残したまま書き換える
+            for (let i = 0; i < labels.length; i++)
+              await q(sb.from("options").update({ label: labels[i] }).eq("id", oldOpts[i].id));
+          } else {
+            if (editing && old.length && !confirm("選択肢の数が変わるため、この質問の既存の票は消去されます。続けますか？")) return;
+            await q(sb.from("options").delete().eq("question_id", id).eq("user_added", false));
+            await q(sb.from("options").insert(labels.map((label, i) => ({ question_id: id, sort_order: i + 1, label }))));
+          }
+        }
+      }
+      if (type === "single" || type === "multiple") {
+        const opts = await q(sb.from("options").select("id,sort_order").eq("question_id", id).eq("user_added", false).order("sort_order"));
+        for (let i = 0; i < opts.length; i++)
+          await q(sb.from("options").update({ is_correct: correct.includes(i + 1) }).eq("id", opts[i].id));
+      }
+      $("dlg").close(); toast("保存しました"); refresh();
+    } catch (ex) { err(errText(ex)); }
+  });
+
+  // ---------- セッション全体のリセット ----------
+  $("resetVotes").addEventListener("click", async () => {
+    if (!confirm(`「${ev.code}」の全質問の票と自由記載の回答を消去します。参加者の登録は残ります。元に戻せません。`)) return;
+    try {
+      const r = await rpc("reset_event", { p_event_id: ev.id, p_include_participants: false });
+      toast(`消去しました（票 ${r.votes}件・自由記載 ${r.texts}件）`); refresh();
+    } catch (err) { fail(err); }
+  });
+  $("resetAll").addEventListener("click", async () => {
+    const typed = prompt(`参加者・票・回答をすべて消去し、表示中の質問も解除します。\n聴衆の端末は参加画面に戻ります。元に戻せません。\n\n実行する場合は参加コード「${ev.code}」を入力してください。`);
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== ev.code) return toast("参加コードが一致しないため中止しました");
+    try {
+      const r = await rpc("reset_event", { p_event_id: ev.id, p_include_participants: true });
+      toast(`全リセットしました（参加者 ${r.participants}人・票 ${r.votes}件・自由記載 ${r.texts}件）`); refresh();
+    } catch (err) { fail(err); }
+  });
+
+  $("delQ").addEventListener("click", async () => {
+    if (!editing || !confirm(`「${editing.qkey}」を投票データごと削除します。元に戻せません。`)) return;
+    try { await q(sb.from("questions").delete().eq("id", editing.id)); $("dlg").close(); toast("削除しました"); refresh(); }
+    catch (ex) { fail(ex); }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
