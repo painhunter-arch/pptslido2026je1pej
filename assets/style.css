@@ -1,0 +1,115 @@
+/* 共通トークン
+   投影で後方席から読めることを最優先。色は濃紺の文字＋薬局らしい深い青緑の1色に絞る。 */
+:root {
+  --ink: #17233b;
+  --ink-soft: #4a5a6e;
+  --paper: #ffffff;
+  --wash: #f2f6f6;
+  --line: #d5dfe0;
+  --track: #e4ecec;
+  --teal: #0b6f6a;
+  --teal-deep: #08504d;
+  --teal-pale: #d8ecea;
+  --alert: #b3261e;
+  --font: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+  --radius-s: 6px;
+  --radius-m: 12px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-size-adjust: 100%;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.hidden { display: none !important; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4em;
+  min-height: 48px; padding: 0 1.2em;
+  border: 2px solid var(--teal); border-radius: var(--radius-s);
+  background: var(--teal); color: #fff; font-weight: 700; cursor: pointer;
+}
+.btn:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
+.btn:disabled { background: var(--line); border-color: var(--line); color: var(--ink-soft); cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--teal); }
+.btn.ghost:hover { background: var(--teal-pale); }
+.btn.small { min-height: 36px; padding: 0 .8em; font-size: .9rem; }
+.btn.danger { background: transparent; border-color: var(--alert); color: var(--alert); }
+
+.field { display: block; margin: 0 0 1rem; }
+.field > span { display: block; font-size: .9rem; color: var(--ink-soft); margin-bottom: .3rem; }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: 48px; padding: .6em .8em;
+  border: 1.5px solid var(--line); border-radius: var(--radius-s); background: #fff;
+}
+.field textarea { min-height: 6em; resize: vertical; }
+
+.notice { padding: .8em 1em; border-radius: var(--radius-s); background: var(--wash); }
+.notice.error { background: #fbeaea; color: var(--alert); }
+
+/* ---------- 結果表示（投影・管理で共通） ---------- */
+.res-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--bar-gap, 1.1rem); }
+.res-bar .row { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+.res-bar .label { font-weight: 700; }
+.res-bar .value { font-weight: 700; white-space: nowrap; }
+.res-bar .value small { font-weight: 400; color: var(--ink-soft); margin-left: .3em; }
+.res-bar .track { height: var(--bar-h, 18px); background: var(--track); border-radius: 3px; overflow: hidden; margin-top: .25em; }
+.res-bar .fill { height: 100%; width: 0; background: var(--teal); transition: width .6s ease; }
+.res-bar.lead .fill { background: var(--teal-deep); }
+.res-bar .rank-no { display: inline-block; min-width: 2.2em; color: var(--teal); }
+
+.res-cloud { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .3em .9em; line-height: 1.25; padding: 1rem 0; }
+.res-cloud span { font-weight: 700; }
+.res-cloud .w1 { font-size: 1em;   color: var(--ink-soft); }
+.res-cloud .w2 { font-size: 1.45em; color: var(--ink); }
+.res-cloud .w3 { font-size: 2em;   color: var(--teal); }
+.res-cloud .w4 { font-size: 2.7em; color: var(--teal-deep); }
+
+.res-list { list-style: none; margin: 0; padding: 0; columns: 2 18em; column-gap: 2rem; }
+.res-list li { break-inside: avoid; padding: .45em 0; border-bottom: 1px solid var(--line); }
+.res-list li .cnt { color: var(--teal); font-weight: 700; margin-left: .5em; }
+
+/* 横並び（投影用）：ラベル｜バー｜数値 を1行に収め、選択肢が多くても画面に入れる */
+.res-bars.inline .res-bar { display: grid; grid-template-columns: minmax(0, 42%) 1fr 7.5em; align-items: center; column-gap: .9em; }
+.res-bars.inline .res-bar .row { display: contents; }
+.res-bars.inline .res-bar .label { grid-column: 1; grid-row: 1; line-height: 1.3; }
+.res-bars.inline .res-bar .track { grid-column: 2; grid-row: 1; margin-top: 0; }
+.res-bars.inline .res-bar .value { grid-column: 3; grid-row: 1; text-align: right; }
+
+.res-rating { display: grid; grid-template-columns: auto 1fr; gap: 2.5em; align-items: center; }
+.res-rating .avg { text-align: center; line-height: 1; }
+.res-rating .avg .num { font-size: 3.4em; font-weight: 700; color: var(--teal-deep); }
+.res-rating .avg .of { font-size: 1.1em; color: var(--ink-soft); margin-left: .2em; }
+.res-rating .avg .cap { font-size: .8em; color: var(--ink-soft); margin-top: .4em; }
+.stars { font-size: 1.4em; letter-spacing: .05em; margin-top: .3em; white-space: nowrap; }
+.stars .st { position: relative; color: var(--track); display: inline-block; }
+.stars .st span { position: absolute; left: 0; top: 0; overflow: hidden; color: #d99a12; }
+@media (max-width: 560px) { .res-rating { grid-template-columns: 1fr; gap: 1em; } }
+
+.res-bars.revealed .res-bar:not(.correct) .fill { background: var(--line); }
+.res-bars.revealed .res-bar:not(.correct) .label { color: var(--ink-soft); }
+.res-bar.correct .fill { background: var(--teal-deep); }
+.res-bar .ok { display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--teal-deep); color: #fff; font-size: .85em; margin-right: .4em; }
+
+.res-board { list-style: none; margin: 0; padding: 0; display: grid; gap: .7em; }
+.res-board li { border-left: .3em solid var(--teal); background: var(--wash); padding: .6em .9em; border-radius: 0 var(--radius-s) var(--radius-s) 0; }
+.res-board li p { margin: 0; font-weight: 700; line-height: 1.45; }
+.res-board.one li { font-size: 1.45em; padding: 1em 1.2em; }
+.res-board li .meta { display: flex; gap: 1em; margin-top: .3em; font-size: .78em; color: var(--ink-soft); }
+.res-board li .likes { color: var(--teal-deep); font-weight: 700; }
+.res-board li.answered { border-left-color: var(--line); }
+.res-board li.answered p { color: var(--ink-soft); }
+.res-board .done { font-weight: 700; }
+
+.res-more { color: var(--ink-soft); font-size: .85em; padding-top: .2em; }
+.res-bar.added .label::after { content: "追加"; font-size: .6em; font-weight: 700; color: var(--teal); border: 1px solid var(--teal); border-radius: 99px; padding: 0 .5em; margin-left: .5em; vertical-align: .15em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .res-bar .fill { transition: none; }
+}
