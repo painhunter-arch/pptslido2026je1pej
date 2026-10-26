@@ -1,12 +1,10 @@
-/* Supabase の「Project Settings → API」に表示される2つの値を貼り付ける。
-   anon key は公開して使う前提の鍵（データの保護はデータベース側の権限設定で行っている）。
-   service_role key は絶対にここへ書かないこと。 */
+/* 接続設定（Supabase：東京リージョン）
+   Publishable key は公開して使う前提の鍵です。
+   Secret key（sb_secret_…）は絶対にここへ書かないでください。 */
 window.VOTE_CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR-ANON-KEY",
-
-  // 聴衆の端末が「いまの質問」を確認する間隔（ミリ秒）。参加者が多いほど長めに
+  SUPABASE_URL: "https://auhiczqhbdfhpuzjbysm.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_TtsAsGdVSa_WS23Iyoj55w_wwFs8u9G",
+  ADDIN_ID: "4b52dc98-0b83-40b0-9bd1-2a2d3261a063",
   PARTICIPANT_POLL_MS: 3000,
-  // 投影画面が結果を更新する間隔（ミリ秒）
   PROJECTOR_POLL_MS: 2000
 };
